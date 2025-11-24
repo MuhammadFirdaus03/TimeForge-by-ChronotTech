@@ -12,12 +12,14 @@ import 'package:url_launcher/url_launcher.dart';
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
-  static const primaryColor = Colors.indigo;
+  // CHANGED: Updated to ChronoTech blue color
+  static const primaryColor = Color(0xFF0D47A1); // Darker blue - VERY different
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final goRouter = ref.watch(goRouterProvider);
     return MaterialApp.router(
+      title: 'TimeForge', // ADDED: App title
       routerConfig: goRouter,
       builder: (_, child) {
         // * Important: Use AppStartupWidget to wrap ForceUpdateWidget otherwise you will get this error:

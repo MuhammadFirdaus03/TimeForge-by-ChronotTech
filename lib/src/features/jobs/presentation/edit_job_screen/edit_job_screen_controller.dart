@@ -15,11 +15,13 @@ class EditJobScreenController extends _$EditJobScreenController {
     //
   }
 
-  Future<bool> submit(
-      {JobID? jobId,
-      Job? oldJob,
-      required String name,
-      required int ratePerHour}) async {
+  Future<bool> submit({
+    JobID? jobId,
+    Job? oldJob,
+    required String name,
+    required int ratePerHour,
+    JobStatus? status, // ADDED: Optional status parameter
+  }) async {
     final currentUser = ref.read(authRepositoryProvider).currentUser;
     if (currentUser == null) {
       throw AssertionError('User can\'t be null');
@@ -42,14 +44,26 @@ class EditJobScreenController extends _$EditJobScreenController {
     } else {
       // job previously existed
       if (jobId != null) {
-        final job = Job(id: jobId, name: name, ratePerHour: ratePerHour);
+        // CHANGED: Use status if provided, otherwise keep old status or default to active
+        final jobStatus = status ?? oldJob?.status ?? JobStatus.active;
+        final job = Job(
+          id: jobId, 
+          name: name, 
+          ratePerHour: ratePerHour,
+          status: jobStatus, // ADDED: Include status
+        );
         state = await AsyncValue.guard(
           () => repository.updateJob(uid: currentUser.uid, job: job),
         );
       } else {
+        // CHANGED: New jobs default to active
         state = await AsyncValue.guard(
           () => repository.addJob(
-              uid: currentUser.uid, name: name, ratePerHour: ratePerHour),
+            uid: currentUser.uid, 
+            name: name, 
+            ratePerHour: ratePerHour,
+            status: status ?? JobStatus.active, // ADDED: Include status
+          ),
         );
       }
       return state.hasError == false;

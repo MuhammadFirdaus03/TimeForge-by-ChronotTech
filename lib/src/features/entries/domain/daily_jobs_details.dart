@@ -51,7 +51,11 @@ class DailyJobsDetails {
       final byJob = _jobsDetails(entriesByDate);
       list.add(DailyJobsDetails(date: date, jobsDetails: byJob));
     }
-    return list.toList();
+    
+    // ADDED: Sort by date, newest first (descending)
+    list.sort((a, b) => b.date.compareTo(a.date));
+    
+    return list;
   }
 
   /// groups entries by job

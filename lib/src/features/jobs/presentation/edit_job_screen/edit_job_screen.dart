@@ -57,6 +57,28 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
     }
   }
 
+  // ADDED: Toggle archive status
+  Future<void> _toggleArchiveStatus() async {
+    final job = widget.job;
+    if (job == null) return;
+
+    final newStatus = job.status == JobStatus.active 
+        ? JobStatus.archived 
+        : JobStatus.active;
+
+    final success =
+        await ref.read(editJobScreenControllerProvider.notifier).submit(
+              jobId: widget.jobId,
+              oldJob: job,
+              name: job.name,
+              ratePerHour: job.ratePerHour,
+              status: newStatus, // ADDED: Pass the new status
+            );
+    if (success && mounted) {
+      context.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<AsyncValue>(
@@ -107,7 +129,7 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
   }
 
   List<Widget> _buildFormChildren() {
-    return [
+    final children = <Widget>[
       TextFormField(
         decoration: const InputDecoration(labelText: 'Job name'),
         keyboardAppearance: Brightness.light,
@@ -127,5 +149,38 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
         onSaved: (value) => _ratePerHour = int.tryParse(value ?? '') ?? 0,
       ),
     ];
+
+    // ADDED: Show archive button only when editing existing job
+    if (widget.job != null) {
+      final isArchived = widget.job!.status == JobStatus.archived;
+      children.addAll([
+        const SizedBox(height: 24),
+        const Divider(),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _toggleArchiveStatus,
+          icon: Icon(isArchived ? Icons.unarchive : Icons.archive),
+          label: Text(isArchived ? 'Unarchive Job' : 'Archive Job'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: isArchived ? Colors.green : Colors.orange,
+            side: BorderSide(
+              color: isArchived ? Colors.green : Colors.orange,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          isArchived
+              ? 'This job is archived. Unarchive it to make it active again.'
+              : 'Archive this job to hide it from your active jobs list.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600],
+              ),
+          textAlign: TextAlign.center,
+        ),
+      ]);
+    }
+
+    return children;
   }
 }

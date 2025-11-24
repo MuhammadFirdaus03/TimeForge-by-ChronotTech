@@ -20,13 +20,16 @@ class JobsRepository {
   static String entriesPath(String uid) => EntriesRepository.entriesPath(uid);
 
   // create
-  Future<void> addJob(
-          {required UserID uid,
-          required String name,
-          required int ratePerHour}) =>
+  Future<void> addJob({
+    required UserID uid,
+    required String name,
+    required int ratePerHour,
+    JobStatus status = JobStatus.active, // ADDED: Status parameter with default
+  }) =>
       _firestore.collection(jobsPath(uid)).add({
         'name': name,
         'ratePerHour': ratePerHour,
+        'status': status == JobStatus.archived ? 'archived' : 'active', // ADDED: Save status
       });
 
   // update

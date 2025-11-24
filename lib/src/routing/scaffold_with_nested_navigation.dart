@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:starter_architecture_flutter_firebase/src/localization/string_hardcoded.dart';
+// ADDED: Import the sticky bar
+import 'package:starter_architecture_flutter_firebase/src/features/timer/presentation/timer_sticky_bar.dart';
 
 // Stateful navigation based on:
 // https://github.com/flutter/packages/blob/main/packages/go_router/example/lib/stateful_shell_route.dart
@@ -57,7 +59,14 @@ class ScaffoldWithNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: body,
+      // CHANGED: Wrapped body in Column to add TimerStickyBar
+      body: Column(
+        children: [
+          Expanded(child: body),
+          // This widget will automatically hide itself if no timer is running
+          const TimerStickyBar(),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
         destinations: [
@@ -125,7 +134,12 @@ class ScaffoldWithNavigationRail extends StatelessWidget {
           const VerticalDivider(thickness: 1, width: 1),
           // This is the main content.
           Expanded(
-            child: body,
+            child: Column(
+              children: [
+                Expanded(child: body),
+                const TimerStickyBar(), // Added here for tablet mode too
+              ],
+            ),
           ),
         ],
       ),

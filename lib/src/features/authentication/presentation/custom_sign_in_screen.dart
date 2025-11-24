@@ -14,11 +14,58 @@ class CustomSignInScreen extends ConsumerWidget {
     final authProviders = ref.watch(authProvidersProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sign in'),
+        title: const Text('TimeForge'), // CHANGED: App name
       ),
-      body: SignInScreen(
-        providers: authProviders,
-        footerBuilder: (context, action) => const SignInAnonymouslyFooter(),
+      body: Column(
+        children: [
+          // ADDED: Branding header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(Sizes.p24),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            child: Column(
+              children: [
+                // Logo placeholder (we'll add the actual logo later)
+                Image.asset(
+                  'assets/images/timeforge_logo.png',
+                  width: 100,
+                  height: 100,
+                ),
+                gapH8,
+                Text(
+                  'TimeForge',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+                gapH4,
+                Text(
+                  'by ChronoTech Solutions',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                ),
+                gapH8,
+                Text(
+                  'Track your time, maximize your productivity',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          // EXISTING: Sign in form
+          Expanded(
+            child: SignInScreen(
+              providers: authProviders,
+              footerBuilder: (context, action) => const SignInAnonymouslyFooter(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -46,6 +93,15 @@ class SignInAnonymouslyFooter extends ConsumerWidget {
           onPressed: () => ref.read(firebaseAuthProvider).signInAnonymously(),
           child: const Text('Sign in anonymously'),
         ),
+        gapH16,
+        // ADDED: Footer branding
+        Text(
+          '© 2024 ChronoTech Solutions',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[500],
+              ),
+        ),
+        gapH8,
       ],
     );
   }
