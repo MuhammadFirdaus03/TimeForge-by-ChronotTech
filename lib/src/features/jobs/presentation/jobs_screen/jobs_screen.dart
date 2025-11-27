@@ -134,7 +134,7 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
                 showArchived: true,
                 activeJobId: timerState.activeJob?.id,
               ),
-            ],
+            ], //extracomments
           );
         },
       ),
@@ -249,7 +249,6 @@ class JobsListView extends ConsumerWidget {
   }
 }
 
-// IMPROVED: Beautiful gradient card design
 class JobCard extends StatelessWidget {
   const JobCard({
     super.key, 
@@ -264,7 +263,6 @@ class JobCard extends StatelessWidget {
   final VoidCallback? onStartTimer;
   final bool isTracking;
 
-  // Generate gradient based on job name
   List<Color> _getGradient() {
     final hash = job.name.hashCode;
     final gradients = [
