@@ -264,7 +264,6 @@ class JobCard extends StatelessWidget {
   final VoidCallback? onStartTimer;
   final bool isTracking;
 
-  // Generate gradient based on job name
   List<Color> _getGradient() {
     final hash = job.name.hashCode;
     final gradients = [
