@@ -20,7 +20,12 @@ class EditJobScreenController extends _$EditJobScreenController {
     Job? oldJob,
     required String name,
     required int ratePerHour,
-    JobStatus? status, // ADDED: Optional status parameter
+    JobStatus? status,
+    // NEW: Client information parameters
+    String? clientName,
+    String? clientEmail,
+    String? clientCompany,
+    String? clientPhone,
   }) async {
     final currentUser = ref.read(authRepositoryProvider).currentUser;
     if (currentUser == null) {
@@ -44,25 +49,35 @@ class EditJobScreenController extends _$EditJobScreenController {
     } else {
       // job previously existed
       if (jobId != null) {
-        // CHANGED: Use status if provided, otherwise keep old status or default to active
+        // Use status if provided, otherwise keep old status or default to active
         final jobStatus = status ?? oldJob?.status ?? JobStatus.active;
         final job = Job(
           id: jobId, 
           name: name, 
           ratePerHour: ratePerHour,
-          status: jobStatus, // ADDED: Include status
+          status: jobStatus,
+          // NEW: Include client information
+          clientName: clientName ?? '',
+          clientEmail: clientEmail,
+          clientCompany: clientCompany,
+          clientPhone: clientPhone,
         );
         state = await AsyncValue.guard(
           () => repository.updateJob(uid: currentUser.uid, job: job),
         );
       } else {
-        // CHANGED: New jobs default to active
+        // New jobs default to active
         state = await AsyncValue.guard(
           () => repository.addJob(
             uid: currentUser.uid, 
             name: name, 
             ratePerHour: ratePerHour,
-            status: status ?? JobStatus.active, // ADDED: Include status
+            status: status ?? JobStatus.active,
+            // NEW: Include client information
+            clientName: clientName ?? '',
+            clientEmail: clientEmail,
+            clientCompany: clientCompany,
+            clientPhone: clientPhone,
           ),
         );
       }

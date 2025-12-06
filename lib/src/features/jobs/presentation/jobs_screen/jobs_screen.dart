@@ -249,7 +249,7 @@ class JobsListView extends ConsumerWidget {
   }
 }
 
-// IMPROVED: Beautiful gradient card design
+// IMPROVED: Beautiful gradient card design with client name
 class JobCard extends StatelessWidget {
   const JobCard({
     super.key, 
@@ -356,6 +356,33 @@ class JobCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
+                      // NEW: Show client company (or name as fallback)
+                      if (job.clientCompany?.isNotEmpty == true || job.clientName.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.business,
+                              color: Colors.white70,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                job.clientCompany?.isNotEmpty == true 
+                                    ? job.clientCompany! 
+                                    : job.clientName,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                      ],
                       Row(
                         children: [
                           const Icon(

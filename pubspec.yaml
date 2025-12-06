@@ -24,10 +24,12 @@ dependencies:
   intl: ^0.20.2
   rxdart: ^0.28.0
   shared_preferences: ^2.5.3
-  # the annotation package containing @riverpod
   riverpod_annotation: ^2.6.1
   force_update_helper: ^0.2.1
   url_launcher: ^6.3.1
+  # NEW: Invoice generation packages
+  pdf: ^3.10.0
+  printing: ^5.12.0
 
 dev_dependencies:
   flutter_test:
@@ -35,13 +37,9 @@ dev_dependencies:
   mocktail: ^1.0.4
   random_string: ^2.3.1
   flutter_lints: ^5.0.0
-  # a tool for running code generators
   build_runner: ^2.4.15
-  # the code generator
   riverpod_generator: ^2.6.5
-  # riverpod_lint makes it easier to work with Riverpod
   riverpod_lint: ^2.6.5
-  # import custom_lint too as riverpod_lint depends on it
   custom_lint: ^0.7.5
 
 

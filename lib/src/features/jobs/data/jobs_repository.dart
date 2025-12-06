@@ -24,12 +24,22 @@ class JobsRepository {
     required UserID uid,
     required String name,
     required int ratePerHour,
-    JobStatus status = JobStatus.active, // ADDED: Status parameter with default
+    JobStatus status = JobStatus.active,
+    // NEW: Client information parameters
+    String? clientName,
+    String? clientEmail,
+    String? clientCompany,
+    String? clientPhone,
   }) =>
       _firestore.collection(jobsPath(uid)).add({
         'name': name,
         'ratePerHour': ratePerHour,
-        'status': status == JobStatus.archived ? 'archived' : 'active', // ADDED: Save status
+        'status': status == JobStatus.archived ? 'archived' : 'active',
+        // NEW: Save client information
+        'clientName': clientName ?? '',
+        if (clientEmail != null) 'clientEmail': clientEmail,
+        if (clientCompany != null) 'clientCompany': clientCompany,
+        if (clientPhone != null) 'clientPhone': clientPhone,
       });
 
   // update

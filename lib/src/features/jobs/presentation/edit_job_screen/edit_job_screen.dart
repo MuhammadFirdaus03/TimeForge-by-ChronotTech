@@ -23,6 +23,12 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
 
   String? _name;
   int? _ratePerHour;
+  
+  // NEW: Client information fields
+  String? _clientName;
+  String? _clientEmail;
+  String? _clientCompany;
+  String? _clientPhone;
 
   @override
   void initState() {
@@ -30,6 +36,11 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
     if (widget.job != null) {
       _name = widget.job?.name;
       _ratePerHour = widget.job?.ratePerHour;
+      // NEW: Initialize client fields
+      _clientName = widget.job?.clientName;
+      _clientEmail = widget.job?.clientEmail;
+      _clientCompany = widget.job?.clientCompany;
+      _clientPhone = widget.job?.clientPhone;
     }
   }
 
@@ -50,6 +61,11 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
                 oldJob: widget.job,
                 name: _name ?? '',
                 ratePerHour: _ratePerHour ?? 0,
+                // NEW: Pass client information
+                clientName: _clientName ?? '',
+                clientEmail: _clientEmail,
+                clientCompany: _clientCompany,
+                clientPhone: _clientPhone,
               );
       if (success && mounted) {
         context.pop();
@@ -57,7 +73,7 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
     }
   }
 
-  // ADDED: Toggle archive status
+  // Toggle archive status
   Future<void> _toggleArchiveStatus() async {
     final job = widget.job;
     if (job == null) return;
@@ -72,7 +88,12 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
               oldJob: job,
               name: job.name,
               ratePerHour: job.ratePerHour,
-              status: newStatus, // ADDED: Pass the new status
+              status: newStatus,
+              // NEW: Preserve client information when archiving
+              clientName: job.clientName,
+              clientEmail: job.clientEmail,
+              clientCompany: job.clientCompany,
+              clientPhone: job.clientPhone,
             );
     if (success && mounted) {
       context.pop();
@@ -130,16 +151,34 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
 
   List<Widget> _buildFormChildren() {
     final children = <Widget>[
+      // Job Information Section
+      Text(
+        'Job Details',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+      ),
+      const SizedBox(height: 12),
       TextFormField(
-        decoration: const InputDecoration(labelText: 'Job name'),
+        decoration: const InputDecoration(
+          labelText: 'Job name',
+          hintText: 'e.g., Website Development',
+          prefixIcon: Icon(Icons.work),
+        ),
         keyboardAppearance: Brightness.light,
         initialValue: _name,
         validator: (value) =>
             (value ?? '').isNotEmpty ? null : 'Name can\'t be empty',
         onSaved: (value) => _name = value,
       ),
+      const SizedBox(height: 16),
       TextFormField(
-        decoration: const InputDecoration(labelText: 'Rate per hour'),
+        decoration: const InputDecoration(
+          labelText: 'Rate per hour',
+          hintText: 'e.g., 50',
+          prefixIcon: Icon(Icons.attach_money),
+        ),
         keyboardAppearance: Brightness.light,
         initialValue: _ratePerHour != null ? '$_ratePerHour' : null,
         keyboardType: const TextInputType.numberWithOptions(
@@ -148,15 +187,84 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
         ),
         onSaved: (value) => _ratePerHour = int.tryParse(value ?? '') ?? 0,
       ),
+      
+      // NEW: Client Information Section
+      const SizedBox(height: 32),
+      const Divider(),
+      const SizedBox(height: 16),
+      Text(
+        'Client Information (for invoicing)',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+      ),
+      const SizedBox(height: 12),
+      TextFormField(
+        decoration: const InputDecoration(
+          labelText: 'Client name',
+          hintText: 'e.g., John Smith',
+          prefixIcon: Icon(Icons.person),
+        ),
+        keyboardAppearance: Brightness.light,
+        initialValue: _clientName,
+        validator: (value) =>
+            (value ?? '').isNotEmpty ? null : 'Client name is required for invoicing',
+        onSaved: (value) => _clientName = value,
+      ),
+      const SizedBox(height: 16),
+      TextFormField(
+        decoration: const InputDecoration(
+          labelText: 'Client email',
+          hintText: 'e.g., john@company.com',
+          prefixIcon: Icon(Icons.email),
+        ),
+        keyboardAppearance: Brightness.light,
+        keyboardType: TextInputType.emailAddress,
+        initialValue: _clientEmail,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return null; // Optional field
+          }
+          if (!value.contains('@')) {
+            return 'Please enter a valid email';
+          }
+          return null;
+        },
+        onSaved: (value) => _clientEmail = value?.isNotEmpty == true ? value : null,
+      ),
+      const SizedBox(height: 16),
+      TextFormField(
+        decoration: const InputDecoration(
+          labelText: 'Client company (optional)',
+          hintText: 'e.g., Acme Corporation',
+          prefixIcon: Icon(Icons.business),
+        ),
+        keyboardAppearance: Brightness.light,
+        initialValue: _clientCompany,
+        onSaved: (value) => _clientCompany = value?.isNotEmpty == true ? value : null,
+      ),
+      const SizedBox(height: 16),
+      TextFormField(
+        decoration: const InputDecoration(
+          labelText: 'Client phone (optional)',
+          hintText: 'e.g., +1 234 567 8900',
+          prefixIcon: Icon(Icons.phone),
+        ),
+        keyboardAppearance: Brightness.light,
+        keyboardType: TextInputType.phone,
+        initialValue: _clientPhone,
+        onSaved: (value) => _clientPhone = value?.isNotEmpty == true ? value : null,
+      ),
     ];
 
-    // ADDED: Show archive button only when editing existing job
+    // Show archive button only when editing existing job
     if (widget.job != null) {
       final isArchived = widget.job!.status == JobStatus.archived;
       children.addAll([
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         const Divider(),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         OutlinedButton.icon(
           onPressed: _toggleArchiveStatus,
           icon: Icon(isArchived ? Icons.unarchive : Icons.archive),
