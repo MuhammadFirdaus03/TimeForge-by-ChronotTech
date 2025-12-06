@@ -134,7 +134,7 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
                 showArchived: true,
                 activeJobId: timerState.activeJob?.id,
               ),
-            ],
+            ], //extracomments
           );
         },
       ),
@@ -249,7 +249,10 @@ class JobsListView extends ConsumerWidget {
   }
 }
 
+<<<<<<< HEAD
 // IMPROVED: Beautiful gradient card design with client name
+=======
+>>>>>>> 1f5d53d0928cedc3e9539fa7a85e44df3da3932c
 class JobCard extends StatelessWidget {
   const JobCard({
     super.key, 
