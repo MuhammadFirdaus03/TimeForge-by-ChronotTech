@@ -159,24 +159,75 @@ class JobEntriesPageContents extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(job.name),
-        actions: <Widget>[
-          // NEW: Generate Invoice button
-          IconButton(
-            icon: const Icon(Icons.receipt_long, color: Colors.white),
-            tooltip: 'Generate Invoice',
-            onPressed: () => _generateInvoice(context, ref),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
-            onPressed: () => context.goNamed(
-              AppRoute.editJob.name,
-              pathParameters: {'id': job.id},
-              extra: job,
+      backgroundColor: Colors.grey[50],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(70),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.primary.withBlue(255),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Text(
+              job.name,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.pop(),
+            ),
+            actions: <Widget>[
+              // Generate Invoice button
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.receipt_long, color: Colors.white),
+                  tooltip: 'Generate Invoice',
+                  onPressed: () => _generateInvoice(context, ref),
+                ),
+              ),
+              // Edit button
+              Container(
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.white),
+                  onPressed: () => context.goNamed(
+                    AppRoute.editJob.name,
+                    pathParameters: {'id': job.id},
+                    extra: job,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       body: JobEntriesList(job: job),
       floatingActionButton: FloatingActionButton(

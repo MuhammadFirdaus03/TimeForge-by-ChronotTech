@@ -13,59 +13,133 @@ class CustomSignInScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authProviders = ref.watch(authProvidersProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('TimeForge'), // CHANGED: App name
-      ),
-      body: Column(
-        children: [
-          // ADDED: Branding header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(Sizes.p24),
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            child: Column(
-              children: [
-                // Logo placeholder (we'll add the actual logo later)
-                Image.asset(
-                  'assets/images/timeforge_logo.png',
-                  width: 100,
-                  height: 100,
-                ),
-                gapH8,
-                Text(
-                  'TimeForge',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+      resizeToAvoidBottomInset: true,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.primary.withBlue(255),
+              Colors.white,
+            ],
+            stops: const [0.0, 0.3, 0.3],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Beautiful header with logo (made smaller)
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    // Logo
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
-                ),
-                gapH4,
-                Text(
-                  'by ChronoTech Solutions',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
+                      child: Center(
+                        child: Text(
+                          'TF',
+                          style: TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'TimeForge',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'by ChronoTech Solutions',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
                         fontStyle: FontStyle.italic,
                       ),
+                    ),
+                  ],
                 ),
-                gapH8,
-                Text(
-                  'Track your time, maximize your productivity',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                  textAlign: TextAlign.center,
+              ),
+              
+              // Sign in form card
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                  ),
+                  child: SignInScreen(
+                    providers: authProviders,
+                    headerBuilder: (context, constraints, shrinkOffset) {
+                      return Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Welcome back!',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Sign in to continue',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    subtitleBuilder: (context, action) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          action == AuthAction.signIn
+                              ? 'Don\'t have an account? Register below'
+                              : 'Already have an account? Sign in below',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      );
+                    },
+                    footerBuilder: (context, action) => const SignInAnonymouslyFooter(),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          // EXISTING: Sign in form
-          Expanded(
-            child: SignInScreen(
-              providers: authProviders,
-              footerBuilder: (context, action) => const SignInAnonymouslyFooter(),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -76,33 +150,51 @@ class SignInAnonymouslyFooter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: [
-        gapH8,
-        const Row(
-          children: [
-            Expanded(child: Divider()),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: Sizes.p8),
-              child: Text('or'),
-            ),
-            Expanded(child: Divider()),
-          ],
-        ),
-        TextButton(
-          onPressed: () => ref.read(firebaseAuthProvider).signInAnonymously(),
-          child: const Text('Sign in anonymously'),
-        ),
-        gapH16,
-        // ADDED: Footer branding
-        Text(
-          '© 2024 ChronoTech Solutions',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[500],
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: Divider(color: Colors.grey[300])),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'or',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-        ),
-        gapH8,
-      ],
+              Expanded(child: Divider(color: Colors.grey[300])),
+            ],
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton.icon(
+            onPressed: () => ref.read(firebaseAuthProvider).signInAnonymously(),
+            icon: const Icon(Icons.privacy_tip_outlined),
+            label: const Text('Continue as Guest'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              side: BorderSide(color: Colors.grey[300]!, width: 2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            '© 2024 ChronoTech Solutions',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[500],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }

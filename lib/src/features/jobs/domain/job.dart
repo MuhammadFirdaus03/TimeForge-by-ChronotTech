@@ -1,12 +1,20 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
+import 'package:starter_architecture_flutter_firebase/src/features/clients/domain/client.dart';
 
 typedef JobID = String;
 
-// Enum for job status
+// Job status
 enum JobStatus {
   active,
   archived,
+}
+
+// NEW: Pricing types
+enum JobPricingType {
+  hourly,      // Charge by the hour
+  fixedPrice,  // One-time fixed amount
+  unpaid,      // Free work / Portfolio
 }
 
 @immutable
@@ -14,9 +22,12 @@ class Job extends Equatable {
   const Job({
     required this.id,
     required this.name,
-    required this.ratePerHour,
+    this.clientId = '',  // Empty default for backward compatibility
+    this.pricingType = JobPricingType.hourly,
+    this.ratePerHour,
+    this.fixedPrice,
     this.status = JobStatus.active,
-    // NEW: Client information fields for invoicing
+    // Keep old client fields for backward compatibility during migration
     this.clientName = '',
     this.clientEmail,
     this.clientCompany,
@@ -25,10 +36,13 @@ class Job extends Equatable {
   
   final JobID id;
   final String name;
-  final int ratePerHour;
+  final ClientID clientId;              // NEW: Link to client
+  final JobPricingType pricingType;     // NEW: How you charge
+  final int? ratePerHour;               // For hourly jobs
+  final double? fixedPrice;             // NEW: For fixed-price jobs
   final JobStatus status;
   
-  // NEW: Client information for invoicing
+  // OLD: Keep these for backward compatibility (will be removed after migration)
   final String clientName;
   final String? clientEmail;
   final String? clientCompany;
@@ -37,7 +51,10 @@ class Job extends Equatable {
   @override
   List<Object?> get props => [
     name, 
-    ratePerHour, 
+    clientId,
+    pricingType,
+    ratePerHour,
+    fixedPrice,
     status,
     clientName,
     clientEmail,
@@ -50,15 +67,30 @@ class Job extends Equatable {
 
   factory Job.fromMap(Map<String, dynamic> data, String id) {
     final name = data['name'] as String;
-    final ratePerHour = data['ratePerHour'] as int;
     
-    // Read status from Firebase, default to active if not present
+    // Read client ID (default to empty for old jobs)
+    final clientId = data['clientId'] as String? ?? '';
+    
+    // Read pricing type (default to hourly for old jobs)
+    final pricingTypeString = data['pricingType'] as String?;
+    final pricingType = pricingTypeString != null
+        ? JobPricingType.values.firstWhere(
+            (e) => e.name == pricingTypeString,
+            orElse: () => JobPricingType.hourly,
+          )
+        : JobPricingType.hourly;
+    
+    // Read pricing values
+    final ratePerHour = data['ratePerHour'] as int?;
+    final fixedPrice = (data['fixedPrice'] as num?)?.toDouble();
+    
+    // Read status
     final statusString = data['status'] as String?;
     final status = statusString == 'archived' 
         ? JobStatus.archived 
         : JobStatus.active;
     
-    // NEW: Read client information from Firebase
+    // Read old client fields (for backward compatibility)
     final clientName = data['clientName'] as String? ?? '';
     final clientEmail = data['clientEmail'] as String?;
     final clientCompany = data['clientCompany'] as String?;
@@ -67,7 +99,10 @@ class Job extends Equatable {
     return Job(
       id: id,
       name: name,
+      clientId: clientId,
+      pricingType: pricingType,
       ratePerHour: ratePerHour,
+      fixedPrice: fixedPrice,
       status: status,
       clientName: clientName,
       clientEmail: clientEmail,
@@ -79,9 +114,12 @@ class Job extends Equatable {
   Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'ratePerHour': ratePerHour,
+      'clientId': clientId,
+      'pricingType': pricingType.name,
+      if (ratePerHour != null) 'ratePerHour': ratePerHour,
+      if (fixedPrice != null) 'fixedPrice': fixedPrice,
       'status': status == JobStatus.archived ? 'archived' : 'active',
-      // NEW: Save client information to Firebase
+      // Keep old fields for backward compatibility
       'clientName': clientName,
       if (clientEmail != null) 'clientEmail': clientEmail,
       if (clientCompany != null) 'clientCompany': clientCompany,
@@ -89,10 +127,12 @@ class Job extends Equatable {
     };
   }
   
-  // Helper method to create a copy with different values
   Job copyWith({
     String? name,
+    ClientID? clientId,
+    JobPricingType? pricingType,
     int? ratePerHour,
+    double? fixedPrice,
     JobStatus? status,
     String? clientName,
     String? clientEmail,
@@ -102,12 +142,39 @@ class Job extends Equatable {
     return Job(
       id: id,
       name: name ?? this.name,
+      clientId: clientId ?? this.clientId,
+      pricingType: pricingType ?? this.pricingType,
       ratePerHour: ratePerHour ?? this.ratePerHour,
+      fixedPrice: fixedPrice ?? this.fixedPrice,
       status: status ?? this.status,
       clientName: clientName ?? this.clientName,
       clientEmail: clientEmail ?? this.clientEmail,
       clientCompany: clientCompany ?? this.clientCompany,
       clientPhone: clientPhone ?? this.clientPhone,
     );
+  }
+  
+  // Helper: Get display price
+  String getDisplayPrice() {
+    switch (pricingType) {
+      case JobPricingType.hourly:
+        return '\$${ratePerHour ?? 0}/hr';
+      case JobPricingType.fixedPrice:
+        return '\$${fixedPrice?.toStringAsFixed(0) ?? "0"}';
+      case JobPricingType.unpaid:
+        return 'Unpaid';
+    }
+  }
+  
+  // Helper: Calculate earnings for time tracked
+  double calculateEarnings(double hours) {
+    switch (pricingType) {
+      case JobPricingType.hourly:
+        return hours * (ratePerHour ?? 0);
+      case JobPricingType.fixedPrice:
+        return fixedPrice ?? 0.0;
+      case JobPricingType.unpaid:
+        return 0.0;
+    }
   }
 }

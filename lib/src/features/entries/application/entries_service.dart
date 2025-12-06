@@ -239,7 +239,8 @@ Stream<List<EntriesListTileModel>> entriesTileModelStream(Ref ref) {
 
   DateTime? start;
   DateTime? end;
-  
+
+
   final now = DateTime.now();
   final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
