@@ -1,5 +1,4 @@
 import 'package:starter_architecture_flutter_firebase/src/features/entries/domain/entry_job.dart';
-import 'package:starter_architecture_flutter_firebase/src/features/jobs/domain/job.dart';
 
 /// Temporary model class to store the time tracked and pay for a job
 class JobDetails {
@@ -17,7 +16,7 @@ class JobDetails {
 class DailyJobsDetails {
   DailyJobsDetails({required this.date, required this.jobsDetails});
   final DateTime date;
-  final List<JobDetails> jobsDetails;
+  final List<JobDetails> jobsDetails; 
 
   double get pay => jobsDetails
       .map((jobDuration) => jobDuration.pay)

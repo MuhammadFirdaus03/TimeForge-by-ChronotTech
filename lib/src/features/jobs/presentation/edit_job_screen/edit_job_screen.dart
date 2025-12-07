@@ -28,7 +28,7 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
   late JobPricingType _pricingType;
   int? _ratePerHour;
   double? _fixedPrice;
-  ClientID? _selectedClientId;
+  String? _selectedClientId; // Changed from ClientID? to String?
 
   @override
   void initState() {
@@ -49,7 +49,7 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
     if (form.validate()) {
       form.save();
       
-      if (_selectedClientId == null) {
+      if (_selectedClientId == null || _selectedClientId!.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a client to assign this job.'))
         );
@@ -68,25 +68,58 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
     return false;
   }
 
+  // Helper method to get selected client details
+  Client? _getSelectedClient(List<Client> clients) {
+    if (_selectedClientId == null || _selectedClientId!.isEmpty) {
+      return null;
+    }
+    try {
+      return clients.firstWhere((c) => c.id == _selectedClientId);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> _submit() async {
     if (_validateAndSaveForm()) {
-      final success =
-          await ref.read(editJobScreenControllerProvider.notifier).submit(
-                jobId: widget.jobId,
-                oldJob: widget.job,
-                name: _name ?? '',
-                clientId: _selectedClientId,
-                pricingType: _pricingType,
-                ratePerHour: _pricingType == JobPricingType.hourly ? _ratePerHour : null,
-                fixedPrice: _pricingType == JobPricingType.fixedPrice ? _fixedPrice : null,
-                clientName: null,
-                clientEmail: null,
-                clientCompany: null,
-                clientPhone: null,
-              );
-      if (success && mounted) {
-        context.pop();
-      }
+      // Get the current list of clients
+      final clientsAsyncValue = ref.read(clientsStreamProvider);
+      
+      clientsAsyncValue.when(
+        data: (clients) async {
+          final selectedClient = _getSelectedClient(clients);
+          
+          final success = await ref.read(editJobScreenControllerProvider.notifier).submit(
+            jobId: widget.jobId,
+            oldJob: widget.job,
+            name: _name ?? '',
+            clientId: _selectedClientId ?? '',
+            pricingType: _pricingType,
+            ratePerHour: _pricingType == JobPricingType.hourly ? _ratePerHour : null,
+            fixedPrice: _pricingType == JobPricingType.fixedPrice ? _fixedPrice : null,
+            status: widget.job?.status,
+            // Pass the actual client details
+            clientName: selectedClient?.name ?? '',
+            clientEmail: selectedClient?.email,
+            clientCompany: selectedClient?.company,
+            clientPhone: selectedClient?.phone,
+          );
+          
+          if (success && mounted) {
+            context.pop();
+          }
+        },
+        loading: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Loading client information...')),
+          );
+        },
+        error: (error, stack) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading clients: $error')),
+          );
+        },
+      );
     }
   }
 
@@ -98,21 +131,20 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
         ? JobStatus.archived 
         : JobStatus.active;
 
-    final success =
-        await ref.read(editJobScreenControllerProvider.notifier).submit(
-              jobId: widget.jobId,
-              oldJob: job,
-              name: job.name,
-              clientId: job.clientId,
-              pricingType: job.pricingType,
-              ratePerHour: job.ratePerHour,
-              fixedPrice: job.fixedPrice,
-              status: newStatus,
-              clientName: null,
-              clientEmail: null,
-              clientCompany: null,
-              clientPhone: null,
-            );
+    final success = await ref.read(editJobScreenControllerProvider.notifier).submit(
+      jobId: widget.jobId,
+      oldJob: job,
+      name: job.name,
+      clientId: job.clientId,
+      pricingType: job.pricingType,
+      ratePerHour: job.ratePerHour,
+      fixedPrice: job.fixedPrice,
+      status: newStatus,
+      clientName: job.clientName,
+      clientEmail: job.clientEmail,
+      clientCompany: job.clientCompany,
+      clientPhone: job.clientPhone,
+    );
     if (success && mounted) {
       context.pop();
     }
@@ -209,45 +241,75 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
           return AsyncValueWidget<List<Client>>(
             value: clientsAsync,
             data: (clients) {
+              if (clients.isEmpty) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.orange[700]),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'No clients found. Please create a client first from the Clients tab.',
+                              style: TextStyle(color: Colors.orange[900]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+
               final dropdownItems = clients.map((client) {
-                final displayLabel = client.company.isNotEmpty
-                    ? '${client.company} (${client.name})'
+                final displayLabel = client.company.isNotEmpty 
+                    ? '${client.company} (${client.name})' 
                     : client.name;
-                return DropdownMenuItem(
+                return DropdownMenuItem<String>(
                   value: client.id,
                   child: Text(displayLabel),
                 );
               }).toList();
 
-              dropdownItems.insert(0, DropdownMenuItem<ClientID>(
+              dropdownItems.insert(0, DropdownMenuItem<String>(
                 value: '',
-                child: Text('--- Select a Client ---', style: TextStyle(color: Colors.grey[600])),
+                child: Text(
+                  '--- Select a Client ---', 
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
               ));
 
-              ClientID initialValue = _selectedClientId ?? '';
+              String initialValue = _selectedClientId ?? '';
               if (initialValue.isNotEmpty && !clients.any((c) => c.id == initialValue)) {
-                 initialValue = '';
+                initialValue = '';
+                _selectedClientId = null;
               }
               
-              return DropdownButtonFormField<ClientID>(
+              return DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   labelText: 'Assigned Client',
                   prefixIcon: Icon(Icons.people),
                   border: OutlineInputBorder(),
                 ),
-                value: initialValue.isEmpty ? null : initialValue,
+                initialValue: initialValue.isEmpty ? null : initialValue,
                 items: dropdownItems,
-                onChanged: (ClientID? newValue) {
+                onChanged: (String? newValue) {
                   setState(() {
-                    _selectedClientId = newValue;
+                    _selectedClientId = (newValue == null || newValue.isEmpty) ? null : newValue;
                   });
                 },
                 validator: (value) => 
                   (value == null || value.isEmpty) ? 'Client assignment is required' : null,
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Text('Error loading clients: $e'),
           );
         },
       ),
@@ -282,8 +344,8 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
             _pricingType = newSelection.first;
             if (_pricingType != JobPricingType.hourly) {
                _ratePerHour = null;
-            } else if (_ratePerHour == null) {
-               _ratePerHour = 0;
+            } else {
+              _ratePerHour ??= 0;
             }
             if (_pricingType != JobPricingType.fixedPrice) {
                _fixedPrice = null;
@@ -326,7 +388,7 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
             prefixIcon: Icon(Icons.sell),
           ),
           keyboardAppearance: Brightness.light,
-          initialValue: _fixedPrice != null ? _fixedPrice!.toStringAsFixed(2) : null,
+          initialValue: _fixedPrice?.toStringAsFixed(2),
           keyboardType: const TextInputType.numberWithOptions(
             signed: false,
             decimal: true,
@@ -344,7 +406,7 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
         ),
     ];
 
-    // FIXED: Archive button section moved inside the children list
+    // Archive button section
     if (widget.job != null) {
       final isArchived = widget.job!.status == JobStatus.archived;
       children.addAll([

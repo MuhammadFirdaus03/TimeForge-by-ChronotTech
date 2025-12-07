@@ -189,5 +189,23 @@ class _ClientStreamProviderElement
   @override
   String get clientId => (origin as ClientStreamProvider).clientId;
 }
+
+String _$clientsStreamHash() => r'fe6f82429bd852aba0377b01dfaad9c77c3f258c';
+
+/// See also [clientsStream].
+@ProviderFor(clientsStream)
+final clientsStreamProvider = AutoDisposeStreamProvider<List<Client>>.internal(
+  clientsStream,
+  name: r'clientsStreamProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$clientsStreamHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ClientsStreamRef = AutoDisposeStreamProviderRef<List<Client>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

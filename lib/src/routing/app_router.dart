@@ -4,7 +4,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/authentication/data/firebase_auth_repository.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/authentication/presentation/custom_profile_screen.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/authentication/presentation/custom_sign_in_screen.dart';
-import 'package:starter_architecture_flutter_firebase/src/features/clients/presentation/clients_screen/clients_screen.dart'; // NEW CLIENTS SCREEN
+import 'package:starter_architecture_flutter_firebase/src/features/clients/presentation/clients_screen/clients_screen.dart';
+import 'package:starter_architecture_flutter_firebase/src/features/clients/presentation/edit_client_screen/edit_client_screen.dart'; // NEW IMPORT
+import 'package:starter_architecture_flutter_firebase/src/features/clients/domain/client.dart'; // NEW IMPORT
 import 'package:starter_architecture_flutter_firebase/src/features/entries/presentation/entries_screen.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/entries/domain/entry.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/jobs/domain/job.dart';
@@ -25,7 +27,7 @@ part 'app_router.g.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _jobsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'jobs');
 final _entriesNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'entries');
-final _clientsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'clients'); // NEW KEY
+final _clientsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'clients');
 final _accountNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'account');
 
 enum AppRoute {
@@ -39,7 +41,9 @@ enum AppRoute {
   addEntry,
   editEntry,
   entries,
-  clients, // NEW ROUTE
+  clients,
+  addClient,    // NEW
+  editClient,   // NEW
   profile,
 }
 
@@ -71,7 +75,7 @@ GoRouter goRouter(Ref ref) {
       } else {
         if (path.startsWith('/onboarding') ||
             path.startsWith('/jobs') ||
-            path.startsWith('/clients') || // NEW REDIRECT CHECK
+            path.startsWith('/clients') ||
             path.startsWith('/entries') ||
             path.startsWith('/account')) {
           return '/signIn';
@@ -182,7 +186,7 @@ GoRouter goRouter(Ref ref) {
             ],
           ),
           
-          // NEW CLIENTS BRANCH
+          // CLIENTS BRANCH - UPDATED WITH NEW ROUTES
           StatefulShellBranch(
             navigatorKey: _clientsNavigatorKey,
             routes: [
@@ -192,6 +196,34 @@ GoRouter goRouter(Ref ref) {
                 pageBuilder: (context, state) => const NoTransitionPage(
                   child: ClientsScreen(),
                 ),
+                routes: [
+                  // ADD CLIENT ROUTE
+                  GoRoute(
+                    path: 'add',
+                    name: AppRoute.addClient.name,
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      return const MaterialPage(
+                        fullscreenDialog: true,
+                        child: EditClientScreen(),
+                      );
+                    },
+                  ),
+                  // EDIT CLIENT ROUTE
+                  GoRoute(
+                    path: ':id/edit',
+                    name: AppRoute.editClient.name,
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      final clientId = state.pathParameters['id'];
+                      final client = state.extra as Client?;
+                      return MaterialPage(
+                        fullscreenDialog: true,
+                        child: EditClientScreen(clientId: clientId, client: client),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),

@@ -1,8 +1,10 @@
 import 'package:firebase_ui_firestore/firebase_ui_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart'; // NEW IMPORT
 import 'package:starter_architecture_flutter_firebase/src/features/clients/data/clients_repository.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/clients/domain/client.dart';
+import 'package:starter_architecture_flutter_firebase/src/routing/app_router.dart'; // NEW IMPORT
 
 class ClientsScreen extends ConsumerWidget {
   const ClientsScreen({super.key});
@@ -65,10 +67,8 @@ class ClientsScreen extends ConsumerWidget {
                     size: 28,
                   ),
                   onPressed: () {
-                    // TODO: Navigate to add client screen
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Add client - coming soon!')),
-                    );
+                    // UPDATED: Navigate to add client screen
+                    context.goNamed(AppRoute.addClient.name);
                   },
                 ),
               ),
@@ -129,9 +129,11 @@ class ClientsScreen extends ConsumerWidget {
           return ClientCard(
             client: client,
             onTap: () {
-              // TODO: Navigate to client details
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('View ${client.displayName} - coming soon!')),
+              // UPDATED: Navigate to edit client screen
+              context.goNamed(
+                AppRoute.editClient.name,
+                pathParameters: {'id': client.id},
+                extra: client,
               );
             },
           );

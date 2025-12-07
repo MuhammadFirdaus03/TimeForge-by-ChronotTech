@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:starter_architecture_flutter_firebase/src/features/clients/domain/client.dart';
 
 typedef JobID = String;
 typedef ClientID = String;
@@ -151,8 +150,8 @@ class Job extends Equatable {
       clientId: clientId ?? this.clientId,
       pricingType: pricingType ?? this.pricingType,
       // Use explicit checks to allow setting to null
-      ratePerHour: ratePerHour != null ? ratePerHour : this.ratePerHour,
-      fixedPrice: fixedPrice != null ? fixedPrice : this.fixedPrice,
+      ratePerHour: ratePerHour ?? this.ratePerHour,
+      fixedPrice: fixedPrice ?? this.fixedPrice,
       status: status ?? this.status,
       clientName: clientName ?? this.clientName,
       clientEmail: clientEmail ?? this.clientEmail,

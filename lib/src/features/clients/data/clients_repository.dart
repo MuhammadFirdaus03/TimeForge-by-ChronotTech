@@ -114,3 +114,14 @@ Stream<Client> clientStream(ClientStreamRef ref, ClientID clientId) {
   final repository = ref.watch(clientsRepositoryProvider);
   return repository.watchClient(uid: user.uid, clientId: clientId);
 }
+
+// ADD THIS NEW PROVIDER - This is what was missing!
+@riverpod
+Stream<List<Client>> clientsStream(ClientsStreamRef ref) {
+  final user = ref.watch(firebaseAuthProvider).currentUser;
+  if (user == null) {
+    throw AssertionError('User can\'t be null');
+  }
+  final repository = ref.watch(clientsRepositoryProvider);
+  return repository.watchClients(uid: user.uid);
+}
