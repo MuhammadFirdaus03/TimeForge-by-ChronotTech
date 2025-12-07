@@ -70,17 +70,25 @@ class ScaffoldWithNavigationBar extends StatelessWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
         destinations: [
-          // products
+          // 0. Jobs
           NavigationDestination(
             icon: const Icon(Icons.work_outline),
             selectedIcon: const Icon(Icons.work),
             label: 'Jobs'.hardcoded,
           ),
+          // 1. Clients (NEW DESTINATION)
+          NavigationDestination(
+            icon: const Icon(Icons.people_outline), // Use a people/client icon
+            selectedIcon: const Icon(Icons.people),
+            label: 'Clients'.hardcoded, 
+          ),
+          // 2. Entries
           NavigationDestination(
             icon: const Icon(Icons.view_headline_outlined),
             selectedIcon: const Icon(Icons.view_headline),
             label: 'Entries'.hardcoded,
           ),
+          // 3. Account
           NavigationDestination(
             icon: const Icon(Icons.person_outline),
             selectedIcon: const Icon(Icons.person),
@@ -114,16 +122,25 @@ class ScaffoldWithNavigationRail extends StatelessWidget {
             onDestinationSelected: onDestinationSelected,
             labelType: NavigationRailLabelType.all,
             destinations: <NavigationRailDestination>[
+              // 0. Jobs
               NavigationRailDestination(
                 icon: const Icon(Icons.work_outline),
                 selectedIcon: const Icon(Icons.work),
                 label: Text('Jobs'.hardcoded),
               ),
+              // 1. Clients (NEW DESTINATION)
+              NavigationRailDestination(
+                icon: const Icon(Icons.people_outline),
+                selectedIcon: const Icon(Icons.people),
+                label: Text('Clients'.hardcoded),
+              ),
+              // 2. Entries
               NavigationRailDestination(
                 icon: const Icon(Icons.view_headline_outlined),
                 selectedIcon: const Icon(Icons.view_headline),
                 label: Text('Entries'.hardcoded),
               ),
+              // 3. Account
               NavigationRailDestination(
                 icon: const Icon(Icons.person_outline),
                 selectedIcon: const Icon(Icons.person),

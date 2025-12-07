@@ -134,7 +134,7 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
                 showArchived: true,
                 activeJobId: timerState.activeJob?.id,
               ),
-            ],
+            ], //extracomments
           );
         },
       ),
@@ -240,7 +240,12 @@ class JobsListView extends ConsumerWidget {
               pathParameters: {'id': job.id},
             ),
             onStartTimer: () {
-              ref.read(timerControllerProvider.notifier).startTimer(job);
+              // Ensure we only start a timer if the job is paid (or you decide otherwise)
+              if (job.pricingType != JobPricingType.unpaid || job.pricingType == JobPricingType.hourly) {
+                 ref.read(timerControllerProvider.notifier).startTimer(job);
+              } else {
+                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot track time for unpaid jobs')));
+              }
             },
           ),
         );
@@ -249,7 +254,6 @@ class JobsListView extends ConsumerWidget {
   }
 }
 
-// IMPROVED: Beautiful gradient card design with client name
 class JobCard extends StatelessWidget {
   const JobCard({
     super.key, 
@@ -264,7 +268,6 @@ class JobCard extends StatelessWidget {
   final VoidCallback? onStartTimer;
   final bool isTracking;
 
-  // Generate gradient based on job name
   List<Color> _getGradient() {
     final hash = job.name.hashCode;
     final gradients = [
@@ -391,7 +394,8 @@ class JobCard extends StatelessWidget {
                             size: 16,
                           ),
                           Text(
-                            '${job.ratePerHour}/hr',
+                            // FIXED: Use helper to show correct price/rate/status
+                            job.getDisplayPrice(),
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 14,

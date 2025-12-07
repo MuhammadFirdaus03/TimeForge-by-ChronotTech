@@ -17,7 +17,7 @@ class EntryListItem extends StatelessWidget {
   final Job job;
   final VoidCallback? onTap;
 
-  // Generate gradient based on entry time
+  // Generate gradient based on entry time - PRESERVED UI LOGIC
   List<Color> _getGradient() {
     final hour = entry.start.hour;
     final gradients = [
@@ -36,9 +36,12 @@ class EntryListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gradient = _getGradient();
-    final pay = job.ratePerHour * entry.durationInHours;
+    
+    // FIXED: Use safe calculation. Returns 0.0 for fixedPrice/unpaid jobs.
+    final pay = job.calculateEarnings(entry.durationInHours);
     final payFormatted = Format.currency(pay);
     
+    // PRESERVED UI: Custom Container and Decoration
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
@@ -85,7 +88,8 @@ class EntryListItem extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (job.ratePerHour > 0.0) ...[
+                    // FIXED: Use pricingType check and current pay value
+                    if (job.pricingType == JobPricingType.hourly && pay > 0.0) ...[
                       const SizedBox(width: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(

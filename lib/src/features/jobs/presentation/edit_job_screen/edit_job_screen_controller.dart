@@ -15,13 +15,16 @@ class EditJobScreenController extends _$EditJobScreenController {
     //
   }
 
+  // FIXED: Updated method signature to include all new fields
   Future<bool> submit({
     JobID? jobId,
     Job? oldJob,
     required String name,
-    required int ratePerHour,
+    required JobPricingType pricingType,
+    int? ratePerHour,
+    double? fixedPrice,
+    String? clientId,
     JobStatus? status,
-    // NEW: Client information parameters
     String? clientName,
     String? clientEmail,
     String? clientCompany,
@@ -47,16 +50,21 @@ class EditJobScreenController extends _$EditJobScreenController {
       state = AsyncError(JobSubmitException(), StackTrace.current);
       return false;
     } else {
-      // job previously existed
+      // job previously existed (update)
       if (jobId != null) {
         // Use status if provided, otherwise keep old status or default to active
         final jobStatus = status ?? oldJob?.status ?? JobStatus.active;
+        
+        // FIXED: Use new Job constructor
         final job = Job(
           id: jobId, 
           name: name, 
+          clientId: clientId ?? oldJob?.clientId ?? '',
+          pricingType: pricingType,
           ratePerHour: ratePerHour,
+          fixedPrice: fixedPrice,
           status: jobStatus,
-          // NEW: Include client information
+          // Include client information
           clientName: clientName ?? '',
           clientEmail: clientEmail,
           clientCompany: clientCompany,
@@ -66,14 +74,18 @@ class EditJobScreenController extends _$EditJobScreenController {
           () => repository.updateJob(uid: currentUser.uid, job: job),
         );
       } else {
-        // New jobs default to active
+        // New job (create)
         state = await AsyncValue.guard(
+          // FIXED: Pass all required new fields to addJob
           () => repository.addJob(
             uid: currentUser.uid, 
             name: name, 
+            pricingType: pricingType,
             ratePerHour: ratePerHour,
+            fixedPrice: fixedPrice,
+            clientId: clientId ?? '',
             status: status ?? JobStatus.active,
-            // NEW: Include client information
+            // Include client information
             clientName: clientName ?? '',
             clientEmail: clientEmail,
             clientCompany: clientCompany,

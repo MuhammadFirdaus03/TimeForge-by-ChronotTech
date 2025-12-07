@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/authentication/data/firebase_auth_repository.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/authentication/presentation/custom_profile_screen.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/authentication/presentation/custom_sign_in_screen.dart';
+import 'package:starter_architecture_flutter_firebase/src/features/clients/presentation/clients_screen/clients_screen.dart'; // NEW CLIENTS SCREEN
 import 'package:starter_architecture_flutter_firebase/src/features/entries/presentation/entries_screen.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/entries/domain/entry.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/jobs/domain/job.dart';
@@ -24,6 +25,7 @@ part 'app_router.g.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _jobsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'jobs');
 final _entriesNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'entries');
+final _clientsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'clients'); // NEW KEY
 final _accountNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'account');
 
 enum AppRoute {
@@ -37,6 +39,7 @@ enum AppRoute {
   addEntry,
   editEntry,
   entries,
+  clients, // NEW ROUTE
   profile,
 }
 
@@ -68,6 +71,7 @@ GoRouter goRouter(Ref ref) {
       } else {
         if (path.startsWith('/onboarding') ||
             path.startsWith('/jobs') ||
+            path.startsWith('/clients') || // NEW REDIRECT CHECK
             path.startsWith('/entries') ||
             path.startsWith('/account')) {
           return '/signIn';
@@ -177,6 +181,21 @@ GoRouter goRouter(Ref ref) {
               ),
             ],
           ),
+          
+          // NEW CLIENTS BRANCH
+          StatefulShellBranch(
+            navigatorKey: _clientsNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/clients',
+                name: AppRoute.clients.name,
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: ClientsScreen(),
+                ),
+              ),
+            ],
+          ),
+
           StatefulShellBranch(
             navigatorKey: _entriesNavigatorKey,
             routes: [

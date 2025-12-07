@@ -19,34 +19,40 @@ class JobsRepository {
   static String jobsPath(String uid) => 'users/$uid/jobs';
   static String entriesPath(String uid) => EntriesRepository.entriesPath(uid);
 
-  // create
+  /// create - FIXED: Updated method signature
   Future<void> addJob({
     required UserID uid,
     required String name,
-    required int ratePerHour,
+    required JobPricingType pricingType,
+    int? ratePerHour,
+    double? fixedPrice,
+    String clientId = '',
     JobStatus status = JobStatus.active,
-    // NEW: Client information parameters
-    String? clientName,
+    // Client information parameters
+    String clientName = '',
     String? clientEmail,
     String? clientCompany,
     String? clientPhone,
   }) =>
       _firestore.collection(jobsPath(uid)).add({
         'name': name,
-        'ratePerHour': ratePerHour,
-        'status': status == JobStatus.archived ? 'archived' : 'active',
-        // NEW: Save client information
-        'clientName': clientName ?? '',
+        'clientId': clientId,
+        'pricingType': pricingType.name,
+        if (ratePerHour != null) 'ratePerHour': ratePerHour,
+        if (fixedPrice != null) 'fixedPrice': fixedPrice,
+        'status': status.name,
+        // Save client information
+        'clientName': clientName,
         if (clientEmail != null) 'clientEmail': clientEmail,
         if (clientCompany != null) 'clientCompany': clientCompany,
         if (clientPhone != null) 'clientPhone': clientPhone,
       });
 
-  // update
+  /// update
   Future<void> updateJob({required UserID uid, required Job job}) =>
       _firestore.doc(jobPath(uid, job.id)).update(job.toMap());
 
-  // delete
+  /// delete
   Future<void> deleteJob({required UserID uid, required JobID jobId}) async {
     // delete where entry.jobId == job.jobId
     final entriesRef = _firestore.collection(entriesPath(uid));
@@ -62,7 +68,7 @@ class JobsRepository {
     await jobRef.delete();
   }
 
-  // read
+  /// read
   Stream<Job> watchJob({required UserID uid, required JobID jobId}) =>
       _firestore
           .doc(jobPath(uid, jobId))

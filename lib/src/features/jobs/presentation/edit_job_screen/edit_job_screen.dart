@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:starter_architecture_flutter_firebase/src/common_widgets/async_value_widget.dart';
 import 'package:starter_architecture_flutter_firebase/src/common_widgets/responsive_center.dart';
 import 'package:starter_architecture_flutter_firebase/src/constants/breakpoints.dart';
+import 'package:starter_architecture_flutter_firebase/src/features/clients/data/clients_repository.dart';
+import 'package:starter_architecture_flutter_firebase/src/features/clients/domain/client.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/jobs/domain/job.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/jobs/presentation/edit_job_screen/edit_job_screen_controller.dart';
 import 'package:starter_architecture_flutter_firebase/src/utils/async_value_ui.dart';
@@ -22,22 +25,22 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
   final _formKey = GlobalKey<FormState>();
 
   String? _name;
+  late JobPricingType _pricingType;
   int? _ratePerHour;
-  String? _clientName;
-  String? _clientEmail;
-  String? _clientCompany;
-  String? _clientPhone;
+  double? _fixedPrice;
+  ClientID? _selectedClientId;
 
   @override
   void initState() {
     super.initState();
     if (widget.job != null) {
       _name = widget.job?.name;
+      _pricingType = widget.job?.pricingType ?? JobPricingType.hourly;
       _ratePerHour = widget.job?.ratePerHour;
-      _clientName = widget.job?.clientName;
-      _clientEmail = widget.job?.clientEmail;
-      _clientCompany = widget.job?.clientCompany;
-      _clientPhone = widget.job?.clientPhone;
+      _fixedPrice = widget.job?.fixedPrice;
+      _selectedClientId = widget.job?.clientId.isNotEmpty == true ? widget.job!.clientId : null;
+    } else {
+      _pricingType = JobPricingType.hourly;
     }
   }
 
@@ -45,6 +48,21 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
     final form = _formKey.currentState!;
     if (form.validate()) {
       form.save();
+      
+      if (_selectedClientId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a client to assign this job.'))
+        );
+        return false;
+      }
+
+      if (_pricingType == JobPricingType.hourly && (_ratePerHour == null || _ratePerHour! <= 0)) {
+        return false;
+      }
+      if (_pricingType == JobPricingType.fixedPrice && (_fixedPrice == null || _fixedPrice! <= 0)) {
+        return false;
+      }
+      
       return true;
     }
     return false;
@@ -57,11 +75,14 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
                 jobId: widget.jobId,
                 oldJob: widget.job,
                 name: _name ?? '',
-                ratePerHour: _ratePerHour ?? 0,
-                clientName: _clientName ?? '',
-                clientEmail: _clientEmail,
-                clientCompany: _clientCompany,
-                clientPhone: _clientPhone,
+                clientId: _selectedClientId,
+                pricingType: _pricingType,
+                ratePerHour: _pricingType == JobPricingType.hourly ? _ratePerHour : null,
+                fixedPrice: _pricingType == JobPricingType.fixedPrice ? _fixedPrice : null,
+                clientName: null,
+                clientEmail: null,
+                clientCompany: null,
+                clientPhone: null,
               );
       if (success && mounted) {
         context.pop();
@@ -82,12 +103,15 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
               jobId: widget.jobId,
               oldJob: job,
               name: job.name,
+              clientId: job.clientId,
+              pricingType: job.pricingType,
               ratePerHour: job.ratePerHour,
+              fixedPrice: job.fixedPrice,
               status: newStatus,
-              clientName: job.clientName,
-              clientEmail: job.clientEmail,
-              clientCompany: job.clientCompany,
-              clientPhone: job.clientPhone,
+              clientName: null,
+              clientEmail: null,
+              clientCompany: null,
+              clientPhone: null,
             );
     if (success && mounted) {
       context.pop();
@@ -101,70 +125,18 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
       (_, state) => state.showAlertDialogOnError(context),
     );
     final state = ref.watch(editJobScreenControllerProvider);
-    final isEdit = widget.job != null;
-    
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withBlue(255),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      appBar: AppBar(
+        title: Text(widget.job == null ? 'New Job' : 'Edit Job'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: state.isLoading ? null : _submit,
+            child: const Text(
+              'Save',
+              style: TextStyle(fontSize: 18, color: Colors.white),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
-          child: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => context.pop(),
-            ),
-            title: Text(
-              isEdit ? 'Edit Job' : 'New Job',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-            actions: <Widget>[
-              Container(
-                margin: const EdgeInsets.only(right: 12),
-                child: TextButton(
-                  onPressed: state.isLoading ? null : _submit,
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.2),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Save',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: state.isLoading ? Colors.white54 : Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
       body: _buildContents(),
     );
@@ -175,340 +147,233 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
       child: ResponsiveCenter(
         maxContentWidth: Breakpoint.tablet,
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: _buildFormChildren(),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _buildForm(),
           ),
         ),
       ),
     );
   }
 
+  Widget _buildForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: _buildFormChildren(),
+      ),
+    );
+  }
+
   List<Widget> _buildFormChildren() {
-    final children = <Widget>[
-      // Job Details Card
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    final List<Widget> children = [
+      // Job Information Section
+      Text(
+        'Job Details',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
             ),
-          ],
+      ),
+      const SizedBox(height: 12),
+      TextFormField(
+        decoration: const InputDecoration(
+          labelText: 'Job name',
+          hintText: 'e.g., Website Development',
+          prefixIcon: Icon(Icons.work),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.blue[400]!, Colors.blue[600]!],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.work,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Job Details',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Job name',
-                hintText: 'e.g., Website Development',
-                prefixIcon: Icon(Icons.work_outline, color: Colors.blue[700]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-              initialValue: _name,
-              validator: (value) =>
-                  (value ?? '').isNotEmpty ? null : 'Job name is required',
-              onSaved: (value) => _name = value,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Rate per hour',
-                hintText: 'e.g., 50',
-                prefixIcon: Icon(Icons.attach_money, color: Colors.green[700]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-              initialValue: _ratePerHour != null ? '$_ratePerHour' : null,
-              keyboardType: const TextInputType.numberWithOptions(
-                signed: false,
-                decimal: false,
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'Rate is required';
-                if (int.tryParse(value) == null) return 'Enter a valid number';
-                return null;
-              },
-              onSaved: (value) => _ratePerHour = int.tryParse(value ?? '') ?? 0,
-            ),
-          ],
-        ),
+        keyboardAppearance: Brightness.light,
+        initialValue: _name,
+        validator: (value) =>
+            (value ?? '').isNotEmpty ? null : 'Name can\'t be empty',
+        onSaved: (value) => _name = value,
       ),
       
-      const SizedBox(height: 20),
-      
-      // Client Information Card
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      // Client Selection Dropdown
+      const SizedBox(height: 32),
+      const Divider(),
+      const SizedBox(height: 16),
+      Text(
+        'Select Client',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.purple[400]!, Colors.purple[600]!],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Client Information',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      Text(
-                        'For invoicing',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Client name',
-                hintText: 'e.g., John Smith',
-                prefixIcon: Icon(Icons.person_outline, color: Colors.purple[700]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-              initialValue: _clientName,
-              validator: (value) =>
-                  (value ?? '').isNotEmpty ? null : 'Client name is required',
-              onSaved: (value) => _clientName = value,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Client email',
-                hintText: 'e.g., john@company.com',
-                prefixIcon: Icon(Icons.email_outlined, color: Colors.orange[700]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-              keyboardType: TextInputType.emailAddress,
-              initialValue: _clientEmail,
-              validator: (value) {
-                if (value == null || value.isEmpty) return null;
-                if (!value.contains('@')) return 'Enter a valid email';
-                return null;
-              },
-              onSaved: (value) => _clientEmail = value?.isNotEmpty == true ? value : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Client company (optional)',
-                hintText: 'e.g., Acme Corporation',
-                prefixIcon: Icon(Icons.business, color: Colors.teal[700]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-              initialValue: _clientCompany,
-              onSaved: (value) => _clientCompany = value?.isNotEmpty == true ? value : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Client phone (optional)',
-                hintText: 'e.g., +1 234 567 8900',
-                prefixIcon: Icon(Icons.phone, color: Colors.indigo[700]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-              keyboardType: TextInputType.phone,
-              initialValue: _clientPhone,
-              onSaved: (value) => _clientPhone = value?.isNotEmpty == true ? value : null,
-            ),
-          ],
-        ),
       ),
+      const SizedBox(height: 12),
+      Consumer(
+        builder: (context, ref, child) {
+          final clientsAsync = ref.watch(clientsStreamProvider);
+          return AsyncValueWidget<List<Client>>(
+            value: clientsAsync,
+            data: (clients) {
+              final dropdownItems = clients.map((client) {
+                final displayLabel = client.company.isNotEmpty
+                    ? '${client.company} (${client.name})'
+                    : client.name;
+                return DropdownMenuItem(
+                  value: client.id,
+                  child: Text(displayLabel),
+                );
+              }).toList();
+
+              dropdownItems.insert(0, DropdownMenuItem<ClientID>(
+                value: '',
+                child: Text('--- Select a Client ---', style: TextStyle(color: Colors.grey[600])),
+              ));
+
+              ClientID initialValue = _selectedClientId ?? '';
+              if (initialValue.isNotEmpty && !clients.any((c) => c.id == initialValue)) {
+                 initialValue = '';
+              }
+              
+              return DropdownButtonFormField<ClientID>(
+                decoration: const InputDecoration(
+                  labelText: 'Assigned Client',
+                  prefixIcon: Icon(Icons.people),
+                  border: OutlineInputBorder(),
+                ),
+                value: initialValue.isEmpty ? null : initialValue,
+                items: dropdownItems,
+                onChanged: (ClientID? newValue) {
+                  setState(() {
+                    _selectedClientId = newValue;
+                  });
+                },
+                validator: (value) => 
+                  (value == null || value.isEmpty) ? 'Client assignment is required' : null,
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Text('Error loading clients: $e'),
+          );
+        },
+      ),
+
+      // Pricing Type Selector
+      const SizedBox(height: 24),
+      Text(
+        'Pricing Type',
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+      const SizedBox(height: 8),
+      SegmentedButton<JobPricingType>(
+        segments: const <ButtonSegment<JobPricingType>>[
+          ButtonSegment<JobPricingType>(
+            value: JobPricingType.hourly,
+            label: Text('Hourly'),
+          ),
+          ButtonSegment<JobPricingType>(
+            value: JobPricingType.fixedPrice,
+            label: Text('Fixed Price'),
+          ),
+          ButtonSegment<JobPricingType>(
+            value: JobPricingType.unpaid,
+            label: Text('Unpaid'),
+          ),
+        ],
+        selected: <JobPricingType>{_pricingType},
+        onSelectionChanged: (Set<JobPricingType> newSelection) {
+          setState(() {
+            _pricingType = newSelection.first;
+            if (_pricingType != JobPricingType.hourly) {
+               _ratePerHour = null;
+            } else if (_ratePerHour == null) {
+               _ratePerHour = 0;
+            }
+            if (_pricingType != JobPricingType.fixedPrice) {
+               _fixedPrice = null;
+            }
+          });
+        },
+      ),
+      const SizedBox(height: 16),
+      
+      // Conditional Pricing Input Field
+      if (_pricingType == JobPricingType.hourly)
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Rate per hour',
+            hintText: 'e.g., 50',
+            prefixIcon: Icon(Icons.attach_money),
+          ),
+          keyboardAppearance: Brightness.light,
+          initialValue: _ratePerHour != null ? '$_ratePerHour' : null, 
+          keyboardType: const TextInputType.numberWithOptions(
+            signed: false,
+            decimal: false,
+          ),
+          validator: (value) {
+            if (_pricingType == JobPricingType.hourly && (value == null || value.isEmpty)) {
+              return 'Hourly rate is required';
+            }
+            if (_pricingType == JobPricingType.hourly && (int.tryParse(value ?? '') ?? 0) <= 0) {
+              return 'Rate must be positive';
+            }
+            return null;
+          },
+          onSaved: (value) => _ratePerHour = int.tryParse(value ?? '') ?? 0,
+        )
+      else if (_pricingType == JobPricingType.fixedPrice)
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Fixed Project Price',
+            hintText: 'e.g., 2500.00',
+            prefixIcon: Icon(Icons.sell),
+          ),
+          keyboardAppearance: Brightness.light,
+          initialValue: _fixedPrice != null ? _fixedPrice!.toStringAsFixed(2) : null,
+          keyboardType: const TextInputType.numberWithOptions(
+            signed: false,
+            decimal: true,
+          ),
+          validator: (value) {
+            if (_pricingType == JobPricingType.fixedPrice && (value == null || value.isEmpty)) {
+              return 'Fixed price is required';
+            }
+            if (_pricingType == JobPricingType.fixedPrice && (double.tryParse(value ?? '') ?? 0.0) <= 0.0) {
+              return 'Price must be positive';
+            }
+            return null;
+          },
+          onSaved: (value) => _fixedPrice = double.tryParse(value ?? '') ?? 0.0,
+        ),
     ];
 
-    // Archive button for existing jobs
+    // FIXED: Archive button section moved inside the children list
     if (widget.job != null) {
       final isArchived = widget.job!.status == JobStatus.archived;
       children.addAll([
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        const SizedBox(height: 32),
+        const Divider(),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          onPressed: _toggleArchiveStatus,
+          icon: Icon(isArchived ? Icons.unarchive : Icons.archive),
+          label: Text(isArchived ? 'Unarchive Job' : 'Archive Job'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: isArchived ? Colors.green : Colors.orange,
+            side: BorderSide(
+              color: isArchived ? Colors.green : Colors.orange,
+            ),
           ),
-          child: Column(
-            children: [
-              ElevatedButton.icon(
-                onPressed: _toggleArchiveStatus,
-                icon: Icon(isArchived ? Icons.unarchive : Icons.archive),
-                label: Text(isArchived ? 'Unarchive Job' : 'Archive Job'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isArchived ? Colors.green[50] : Colors.orange[50],
-                  foregroundColor: isArchived ? Colors.green[700] : Colors.orange[700],
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: isArchived ? Colors.green : Colors.orange,
-                      width: 2,
-                    ),
-                  ),
-                  elevation: 0,
-                ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          isArchived
+              ? 'This job is archived. Unarchive it to make it active again.'
+              : 'Archive this job to hide it from your active jobs list.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600],
               ),
-              const SizedBox(height: 12),
-              Text(
-                isArchived
-                    ? 'This job is archived. Unarchive it to make it active again.'
-                    : 'Archive this job to hide it from your active jobs list.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+          textAlign: TextAlign.center,
         ),
       ]);
     }
-
-    children.add(const SizedBox(height: 40));
 
     return children;
   }

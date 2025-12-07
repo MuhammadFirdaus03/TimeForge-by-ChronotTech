@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/authentication/data/firebase_auth_repository.dart';
@@ -85,6 +85,7 @@ class EntriesService {
     }).whereType<EntryJob>().toList();
   }
 
+  /// Exports the entry data to a comma-separated-values (CSV) string - FIXED
   Future<String> exportEntriesToCsv(UserID uid, EntriesFilterState filterState) async {
     final allEntries = await _allEntriesStream(uid).first;
     final now = DateTime.now();
@@ -114,14 +115,17 @@ class EntriesService {
 
     final filteredEntries = allEntries.where((entryJob) {
         final entryDate = entryJob.entry.start;
+        // Filter out archived jobs
         if (entryJob.job.status == JobStatus.archived) return false;
+        // Apply date filters
         if (startFilter != null && entryDate.isBefore(startFilter)) return false;
         if (endFilter != null && entryDate.isAfter(endFilter)) return false;
         return true;
     }).toList();
 
+    // FIXED: Changed column name to be more generic for rate/price
     final List<List<String>> rawRows = [];
-    rawRows.add(['Date', 'Job Name', 'Start Time', 'End Time', 'Duration (Hours)', 'Rate (\$)', 'Earnings (\$)']);
+    rawRows.add(['Date', 'Job Name', 'Start Time', 'End Time', 'Duration (Hours)', 'Rate/Price', 'Earnings (\$)']);
 
     final dateFormatter = DateFormat('yyyy-MM-dd');
     final timeFormatter = DateFormat('HH:mm:ss');
@@ -132,7 +136,23 @@ class EntriesService {
         
         final duration = entry.end.difference(entry.start);
         final durationInHours = duration.inMinutes / 60;
-        final pay = durationInHours * job.ratePerHour;
+        
+        // FIXED: Use job helper for safe calculation (returns 0.0 for non-hourly per-entry)
+        final pay = job.calculateEarnings(durationInHours);
+
+        // FIXED: Determine what to display in the 'Rate/Price' column
+        String rateOrPrice;
+        switch (job.pricingType) {
+          case JobPricingType.hourly:
+            rateOrPrice = job.ratePerHour?.toString() ?? '0';
+            break;
+          case JobPricingType.fixedPrice:
+            rateOrPrice = '\$${job.fixedPrice?.toStringAsFixed(2) ?? '0.00'} (Fixed)';
+            break;
+          case JobPricingType.unpaid:
+            rateOrPrice = 'Unpaid';
+            break;
+        }
 
         rawRows.add([
             dateFormatter.format(entry.start),
@@ -140,8 +160,8 @@ class EntriesService {
             timeFormatter.format(entry.start), 
             timeFormatter.format(entry.end),   
             durationInHours.toStringAsFixed(2),
-            job.ratePerHour.toString(),
-            pay.toStringAsFixed(2),
+            rateOrPrice, // FIXED
+            pay.toStringAsFixed(2), // FIXED
         ]);
     }
     
@@ -239,8 +259,7 @@ Stream<List<EntriesListTileModel>> entriesTileModelStream(Ref ref) {
 
   DateTime? start;
   DateTime? end;
-
-
+  
   final now = DateTime.now();
   final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
 

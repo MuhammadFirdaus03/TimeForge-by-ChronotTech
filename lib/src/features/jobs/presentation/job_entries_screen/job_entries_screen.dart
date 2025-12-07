@@ -93,17 +93,50 @@ class JobEntriesPageContents extends ConsumerWidget {
       // Generate invoice number
       final invoiceNumber = 'INV-${DateTime.now().millisecondsSinceEpoch}';
 
-      // Create line items from entries
-      final lineItems = entries.map((entry) {
-        return InvoiceLineItem(
-          date: entry.start,
-          description: entry.comment?.isNotEmpty == true 
-              ? entry.comment! 
-              : 'Work on ${job.name}',
-          hours: entry.durationInHours,
-          ratePerHour: job.ratePerHour.toDouble(),
-        );
-      }).toList();
+      // FIXED: Implement logic to create line items based on JobPricingType
+      final List<InvoiceLineItem> lineItems = [];
+      
+      if (job.pricingType == JobPricingType.hourly) {
+          // For hourly, generate line item for each entry
+          lineItems.addAll(entries.map((entry) {
+              // FIX: Safely convert ratePerHour from nullable int? to double, defaulting to 0.0
+              final rate = (job.ratePerHour ?? 0).toDouble();
+              return InvoiceLineItem(
+                  date: entry.start,
+                  description: entry.comment.isNotEmpty ? entry.comment : 'Work on ${job.name}',
+                  hours: entry.durationInHours,
+                  ratePerHour: rate,
+              );
+          }).toList());
+      } else if (job.pricingType == JobPricingType.fixedPrice) {
+          // For fixed price, consolidate all tracked hours but bill one fixed price line item
+          final hoursList = entries.map((e) => e.durationInHours).toList();
+          final totalHours = hoursList.fold(0.0, (sum, h) => sum + h);
+          
+          lineItems.add(InvoiceLineItem(
+              date: DateTime.now(), // Use today's date for fixed item
+              description: 'Completed Project: ${job.name} (Time tracked: ${totalHours.toStringAsFixed(1)}h)',
+              hours: 1.0, // Quantity of 1 unit
+              ratePerHour: job.fixedPrice ?? 0.0, // Fixed price is the total amount (as the rate per unit 1)
+          ));
+      } else {
+        // Unpaid/Free work: No line items for billing
+      }
+      
+      // Prevent crash and confusion if an unpaid job is erroneously called
+      if (lineItems.isEmpty && job.pricingType != JobPricingType.unpaid) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invoice could not be generated. Check job pricing type.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
 
       // Create invoice data
       final invoice = InvoiceData(
