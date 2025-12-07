@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart'; // NEW IMPORT
 import 'package:starter_architecture_flutter_firebase/src/features/clients/data/clients_repository.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/clients/domain/client.dart';
 import 'package:starter_architecture_flutter_firebase/src/routing/app_router.dart'; // NEW IMPORT
+import 'package:starter_architecture_flutter_firebase/src/features/authentication/data/firebase_auth_repository.dart';
 
 class ClientsScreen extends ConsumerWidget {
   const ClientsScreen({super.key});
@@ -126,16 +127,129 @@ class ClientsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(12),
         itemBuilder: (context, doc) {
           final client = doc.data();
-          return ClientCard(
-            client: client,
-            onTap: () {
-              // UPDATED: Navigate to edit client screen
-              context.goNamed(
-                AppRoute.editClient.name,
-                pathParameters: {'id': client.id},
-                extra: client,
+          return Dismissible(
+            key: Key('client-${client.id}'),
+            direction: DismissDirection.endToStart,
+            confirmDismiss: (direction) async {
+              // Show confirmation dialog before deleting
+              return await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Client'),
+                  content: Text(
+                    'Are you sure you want to delete ${client.displayName}? '
+                    'This will not delete associated jobs.',
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
               );
             },
+            onDismissed: (direction) async {
+              // Delete the client
+              try {
+                final user = ref.read(firebaseAuthProvider).currentUser;
+                if (user != null) {
+                  await ref.read(clientsRepositoryProvider).deleteClient(
+                    uid: user.uid,
+                    clientId: client.id,
+                  );
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${client.displayName} deleted'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting client: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            background: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.red, Colors.redAccent],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 24),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.delete, color: Colors.white, size: 32),
+                  SizedBox(height: 4),
+                  Text(
+                    'Delete',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            secondaryBackground: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.orange, Colors.deepOrange],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 24),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.edit, color: Colors.white, size: 32),
+                  SizedBox(height: 4),
+                  Text(
+                    'Edit',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            child: ClientCard(
+              client: client,
+              onTap: () {
+                // UPDATED: Navigate to client details (view jobs)
+                context.goNamed(
+                  AppRoute.clientDetails.name,
+                  pathParameters: {'id': client.id},
+                  extra: client,
+                );
+              },
+            ),
           );
         },
       ),

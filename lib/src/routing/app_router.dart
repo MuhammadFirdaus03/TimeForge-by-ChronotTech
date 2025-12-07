@@ -5,8 +5,9 @@ import 'package:starter_architecture_flutter_firebase/src/features/authenticatio
 import 'package:starter_architecture_flutter_firebase/src/features/authentication/presentation/custom_profile_screen.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/authentication/presentation/custom_sign_in_screen.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/clients/presentation/clients_screen/clients_screen.dart';
-import 'package:starter_architecture_flutter_firebase/src/features/clients/presentation/edit_client_screen/edit_client_screen.dart'; // NEW IMPORT
-import 'package:starter_architecture_flutter_firebase/src/features/clients/domain/client.dart'; // NEW IMPORT
+import 'package:starter_architecture_flutter_firebase/src/features/clients/presentation/edit_client_screen/edit_client_screen.dart';
+import 'package:starter_architecture_flutter_firebase/src/features/clients/presentation/client_details_screen/client_details_screen.dart'; // ADDED THIS
+import 'package:starter_architecture_flutter_firebase/src/features/clients/domain/client.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/entries/presentation/entries_screen.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/entries/domain/entry.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/jobs/domain/job.dart';
@@ -42,8 +43,9 @@ enum AppRoute {
   editEntry,
   entries,
   clients,
-  addClient,    // NEW
-  editClient,   // NEW
+  clientDetails, // ADDED THIS - was missing!
+  addClient,
+  editClient,
   profile,
 }
 
@@ -197,7 +199,7 @@ GoRouter goRouter(Ref ref) {
                   child: ClientsScreen(),
                 ),
                 routes: [
-                  // ADD CLIENT ROUTE
+                  // ADD CLIENT ROUTE - MUST COME BEFORE :id ROUTE
                   GoRoute(
                     path: 'add',
                     name: AppRoute.addClient.name,
@@ -209,7 +211,7 @@ GoRouter goRouter(Ref ref) {
                       );
                     },
                   ),
-                  // EDIT CLIENT ROUTE
+                  // EDIT CLIENT ROUTE - MUST COME BEFORE :id ROUTE
                   GoRoute(
                     path: ':id/edit',
                     name: AppRoute.editClient.name,
@@ -220,6 +222,31 @@ GoRouter goRouter(Ref ref) {
                       return MaterialPage(
                         fullscreenDialog: true,
                         child: EditClientScreen(clientId: clientId, client: client),
+                      );
+                    },
+                  ),
+                  // VIEW CLIENT DETAILS (JOBS) - MUST COME LAST
+                  GoRoute(
+                    path: ':id',
+                    name: AppRoute.clientDetails.name,
+                    pageBuilder: (context, state) {
+                      final clientId = state.pathParameters['id']!;
+                      final client = state.extra as Client?;
+                      
+                      // If client is null, we can't proceed
+                      if (client == null) {
+                        return MaterialPage(
+                          child: Scaffold(
+                            appBar: AppBar(title: const Text('Error')),
+                            body: const Center(
+                              child: Text('Client not found'),
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      return MaterialPage(
+                        child: ClientDetailsScreen(client: client),
                       );
                     },
                   ),
