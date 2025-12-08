@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:starter_architecture_flutter_firebase/src/features/entries/domain/entry_job.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/jobs/domain/job.dart';
 
@@ -93,14 +95,14 @@ class DailyJobsDetails {
           durationInHours: entry.durationInHours,
           pay: pay,
           pricingType: job.pricingType,
-          fixedPrice: job.fixedPrice, // MAKE SURE THIS IS SET
+          fixedPrice: job.fixedPrice, 
         );
       } else {
-        // Accumulate hours and pay (pay is 0.0 for fixed/unpaid)
+        
         jobDuration[entry.jobId]!.pay += pay;
         jobDuration[entry.jobId]!.durationInHours += entry.durationInHours;
       }
     }
     return jobDuration.values.toList();
   }
-}
+} 
