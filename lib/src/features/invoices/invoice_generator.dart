@@ -2,6 +2,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:starter_architecture_flutter_firebase/src/features/jobs/domain/job.dart';
 
 // Invoice Data Model
 class InvoiceData {
@@ -25,6 +26,7 @@ class InvoiceData {
   
   // Project Details
   final String projectName;
+  final JobPricingType pricingType; // NEW: Track the job pricing type
   final List<InvoiceLineItem> lineItems;
   
   // Payment Details
@@ -48,6 +50,7 @@ class InvoiceData {
     required this.clientEmail,
     this.clientAddress,
     required this.projectName,
+    required this.pricingType, // NEW
     required this.lineItems,
     this.taxRate = 0.0,
     this.paymentTerms = 'Payment due within 14 days',
@@ -62,18 +65,20 @@ class InvoiceData {
   double get total => subtotal + tax;
 }
 
-// Line Item (Each time entry)
+// Line Item (Each time entry or fixed price item)
 class InvoiceLineItem {
   final DateTime date;
   final String description;
   final double hours;
   final double ratePerHour;
+  final bool isFixedPriceItem; // NEW: Flag for fixed price items
   
   InvoiceLineItem({
     required this.date,
     required this.description,
     required this.hours,
     required this.ratePerHour,
+    this.isFixedPriceItem = false, // NEW
   });
   
   double get total => hours * ratePerHour;
@@ -96,6 +101,7 @@ class InvoiceGenerator {
           pw.SizedBox(height: 20),
           _buildProjectInfo(invoice),
           pw.SizedBox(height: 10),
+          // CHANGED: Different table based on pricing type
           _buildLineItemsTable(invoice),
           pw.SizedBox(height: 20),
           _buildTotals(invoice),
@@ -238,55 +244,147 @@ class InvoiceGenerator {
     );
   }
   
-  // Project name
+  // Project name with pricing type badge
   static pw.Widget _buildProjectInfo(InvoiceData invoice) {
+    String pricingLabel;
+    PdfColor badgeColor;
+    
+    switch (invoice.pricingType) {
+      case JobPricingType.hourly:
+        pricingLabel = 'HOURLY RATE';
+        badgeColor = PdfColors.green700;
+        break;
+      case JobPricingType.fixedPrice:
+        pricingLabel = 'FIXED PRICE';
+        badgeColor = PdfColors.purple700;
+        break;
+      case JobPricingType.unpaid:
+        pricingLabel = 'DOCUMENTATION ONLY';
+        badgeColor = PdfColors.grey700;
+        break;
+    }
+    
     return pw.Container(
       padding: pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
         color: PdfColors.grey200,
         borderRadius: pw.BorderRadius.circular(8),
       ),
-      child: pw.Text(
-        'PROJECT: ${invoice.projectName}',
-        style: pw.TextStyle(
-          fontSize: 14,
-          fontWeight: pw.FontWeight.bold,
-        ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Expanded(
+            child: pw.Text(
+              'PROJECT: ${invoice.projectName}',
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ),
+          pw.Container(
+            padding: pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: pw.BoxDecoration(
+              color: badgeColor,
+              borderRadius: pw.BorderRadius.circular(4),
+            ),
+            child: pw.Text(
+              pricingLabel,
+              style: pw.TextStyle(
+                color: PdfColors.white,
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
   
-  // Line items table
+  // UPDATED: Line items table that adapts to pricing type
   static pw.Widget _buildLineItemsTable(InvoiceData invoice) {
     final dateFormat = DateFormat('MMM dd');
     final currencyFormat = NumberFormat.currency(symbol: '\$');
     
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey400),
-      children: [
-        // Header row
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfColors.blue700),
-          children: [
-            _tableHeader('DATE'),
-            _tableHeader('DESCRIPTION'),
-            _tableHeader('HOURS'),
-            _tableHeader('RATE'),
-            _tableHeader('AMOUNT'),
-          ],
-        ),
-        // Data rows
-        ...invoice.lineItems.map((item) => pw.TableRow(
-          children: [
-            _tableCell(dateFormat.format(item.date)),
-            _tableCell(item.description),
-            _tableCell('${item.hours.toStringAsFixed(1)}h'),
-            _tableCell(currencyFormat.format(item.ratePerHour)),
-            _tableCell(currencyFormat.format(item.total)),
-          ],
-        )),
-      ],
-    );
+    // Different table headers based on pricing type
+    if (invoice.pricingType == JobPricingType.fixedPrice) {
+      // Fixed price: Simple table
+      return pw.Table(
+        border: pw.TableBorder.all(color: PdfColors.grey400),
+        children: [
+          // Header row
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: PdfColors.purple700),
+            children: [
+              _tableHeader('DESCRIPTION'),
+              _tableHeader('HOURS TRACKED'),
+              _tableHeader('FIXED AMOUNT'),
+            ],
+          ),
+          // Single data row for fixed price
+          ...invoice.lineItems.map((item) => pw.TableRow(
+            children: [
+              _tableCell(item.description),
+              _tableCell('${item.hours.toStringAsFixed(1)}h'),
+              _tableCell(currencyFormat.format(item.total)),
+            ],
+          )),
+        ],
+      );
+    } else if (invoice.pricingType == JobPricingType.unpaid) {
+      // Unpaid: No amounts, just tracking
+      return pw.Table(
+        border: pw.TableBorder.all(color: PdfColors.grey400),
+        children: [
+          // Header row
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: PdfColors.grey700),
+            children: [
+              _tableHeader('DATE'),
+              _tableHeader('DESCRIPTION'),
+              _tableHeader('HOURS TRACKED'),
+            ],
+          ),
+          // Data rows
+          ...invoice.lineItems.map((item) => pw.TableRow(
+            children: [
+              _tableCell(dateFormat.format(item.date)),
+              _tableCell(item.description),
+              _tableCell('${item.hours.toStringAsFixed(1)}h'),
+            ],
+          )),
+        ],
+      );
+    } else {
+      // Hourly: Full detailed table (original)
+      return pw.Table(
+        border: pw.TableBorder.all(color: PdfColors.grey400),
+        children: [
+          // Header row
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: PdfColors.green700),
+            children: [
+              _tableHeader('DATE'),
+              _tableHeader('DESCRIPTION'),
+              _tableHeader('HOURS'),
+              _tableHeader('RATE'),
+              _tableHeader('AMOUNT'),
+            ],
+          ),
+          // Data rows
+          ...invoice.lineItems.map((item) => pw.TableRow(
+            children: [
+              _tableCell(dateFormat.format(item.date)),
+              _tableCell(item.description),
+              _tableCell('${item.hours.toStringAsFixed(1)}h'),
+              _tableCell(currencyFormat.format(item.ratePerHour)),
+              _tableCell(currencyFormat.format(item.total)),
+            ],
+          )),
+        ],
+      );
+    }
   }
   
   static pw.Widget _tableHeader(String text) {
@@ -310,8 +408,32 @@ class InvoiceGenerator {
     );
   }
   
-  // Totals section
+  // UPDATED: Totals section (hide for unpaid)
   static pw.Widget _buildTotals(InvoiceData invoice) {
+    // Don't show totals for unpaid invoices
+    if (invoice.pricingType == JobPricingType.unpaid) {
+      return pw.Align(
+        alignment: pw.Alignment.centerRight,
+        child: pw.Container(
+          width: 200,
+          padding: pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey200,
+            borderRadius: pw.BorderRadius.circular(8),
+          ),
+          child: pw.Text(
+            'DOCUMENTATION ONLY\nNo payment required',
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.grey700,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+        ),
+      );
+    }
+    
     final currencyFormat = NumberFormat.currency(symbol: '\$');
     
     return pw.Align(
@@ -361,8 +483,34 @@ class InvoiceGenerator {
     );
   }
   
-  // Payment terms
+  // UPDATED: Payment terms (adjusted for unpaid)
   static pw.Widget _buildPaymentTerms(InvoiceData invoice) {
+    // Different message for unpaid
+    if (invoice.pricingType == JobPricingType.unpaid) {
+      return pw.Container(
+        padding: pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey400),
+          borderRadius: pw.BorderRadius.circular(8),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('NOTES',
+              style: pw.TextStyle(
+                fontSize: 12,
+                fontWeight: pw.FontWeight.bold,
+              )),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'This is a time tracking document only. No payment is required for this work.',
+              style: pw.TextStyle(fontSize: 10),
+            ),
+          ],
+        ),
+      );
+    }
+    
     return pw.Container(
       padding: pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(

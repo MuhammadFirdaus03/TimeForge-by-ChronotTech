@@ -93,63 +93,71 @@ class JobEntriesPageContents extends ConsumerWidget {
       // Generate invoice number
       final invoiceNumber = 'INV-${DateTime.now().millisecondsSinceEpoch}';
 
-      // FIXED: Implement logic to create line items based on JobPricingType
+      // UPDATED: Create line items based on JobPricingType
       final List<InvoiceLineItem> lineItems = [];
       
       if (job.pricingType == JobPricingType.hourly) {
-          // For hourly, generate line item for each entry
-          lineItems.addAll(entries.map((entry) {
-              // FIX: Safely convert ratePerHour from nullable int? to double, defaulting to 0.0
-              final rate = (job.ratePerHour ?? 0).toDouble();
-              return InvoiceLineItem(
-                  date: entry.start,
-                  description: entry.comment.isNotEmpty ? entry.comment : 'Work on ${job.name}',
-                  hours: entry.durationInHours,
-                  ratePerHour: rate,
-              );
-          }).toList());
+        // Hourly: Generate line item for each entry
+        lineItems.addAll(entries.map((entry) {
+          final rate = (job.ratePerHour ?? 0).toDouble();
+          return InvoiceLineItem(
+            date: entry.start,
+            description: entry.comment.isNotEmpty ? entry.comment : 'Work on ${job.name}',
+            hours: entry.durationInHours,
+            ratePerHour: rate,
+          );
+        }).toList());
       } else if (job.pricingType == JobPricingType.fixedPrice) {
-          // For fixed price, consolidate all tracked hours but bill one fixed price line item
-          final hoursList = entries.map((e) => e.durationInHours).toList();
-          final totalHours = hoursList.fold(0.0, (sum, h) => sum + h);
-          
-          lineItems.add(InvoiceLineItem(
-              date: DateTime.now(), // Use today's date for fixed item
-              description: 'Completed Project: ${job.name} (Time tracked: ${totalHours.toStringAsFixed(1)}h)',
-              hours: 1.0, // Quantity of 1 unit
-              ratePerHour: job.fixedPrice ?? 0.0, // Fixed price is the total amount (as the rate per unit 1)
-          ));
-      } else {
-        // Unpaid/Free work: No line items for billing
+        // Fixed Price: Single consolidated line item
+        final totalHours = entries.fold(0.0, (sum, e) => sum + e.durationInHours);
+        
+        lineItems.add(InvoiceLineItem(
+          date: DateTime.now(),
+          description: 'Completed Project: ${job.name} (Time tracked: ${totalHours.toStringAsFixed(1)}h)',
+          hours: 1.0, // Quantity of 1 unit
+          ratePerHour: job.fixedPrice ?? 0.0, // This becomes the total amount
+        ));
+      } else if (job.pricingType == JobPricingType.unpaid) {
+        // Unpaid: Documentation only, each entry listed with $0
+        lineItems.addAll(entries.map((entry) {
+          return InvoiceLineItem(
+            date: entry.start,
+            description: entry.comment.isNotEmpty ? entry.comment : 'Work on ${job.name}',
+            hours: entry.durationInHours,
+            ratePerHour: 0.0, // No rate for unpaid
+          );
+        }).toList());
       }
-      
-      // Prevent crash and confusion if an unpaid job is erroneously called
-      if (lineItems.isEmpty && job.pricingType != JobPricingType.unpaid) {
+
+      // Prevent empty invoice
+      if (lineItems.isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Invoice could not be generated. Check job pricing type.'),
+              content: Text('No invoice items to generate'),
               backgroundColor: Colors.red,
               duration: Duration(seconds: 3),
             ),
           );
-          Navigator.pop(context);
         }
         return;
       }
 
       // Create invoice data
       final invoice = InvoiceData(
+        // Invoice info
         invoiceNumber: invoiceNumber,
         issueDate: DateTime.now(),
         dueDate: DateTime.now().add(const Duration(days: 14)),
         
-        // Your info (you can customize this or make it editable)
+        // Your company info (freelancer)
         yourName: user.displayName ?? user.email?.split('@')[0] ?? 'Freelancer',
         yourEmail: user.email ?? '',
         yourPhone: '+60 12-345-6789', // TODO: Make this configurable
+        yourAddress: null,
+        yourWebsite: null,
         
-        // Client info from job
+        // Client info
         clientName: job.clientName,
         clientCompany: job.clientCompany ?? job.clientName,
         clientEmail: job.clientEmail ?? '',
@@ -157,10 +165,17 @@ class JobEntriesPageContents extends ConsumerWidget {
         
         // Project details
         projectName: job.name,
+        pricingType: job.pricingType, // ADDED: Required parameter
         lineItems: lineItems,
         
-        // Payment terms
-        notes: 'Thank you for your business!',
+        // Payment details
+        taxRate: 0.0,
+        paymentTerms: 'Payment due within 14 days',
+        bankName: null,
+        accountNumber: null,
+        notes: job.pricingType == JobPricingType.unpaid 
+            ? 'This is a time tracking document for portfolio/documentation purposes. No payment required.'
+            : 'Thank you for your business!',
       );
 
       // Generate and share PDF
@@ -168,15 +183,24 @@ class JobEntriesPageContents extends ConsumerWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invoice generated successfully!'),
+          SnackBar(
+            content: Text(
+              job.pricingType == JobPricingType.unpaid
+                  ? 'Time tracking document generated successfully!'
+                  : 'Invoice generated successfully!'
+            ),
             backgroundColor: Colors.green,
           ),
         );
       }
     } catch (e) {
       // Close loading dialog if still open
-      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        // Try to pop the loading dialog, but catch if it's already closed
+        try {
+          Navigator.pop(context);
+        } catch (_) {}
+      }
       
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -238,7 +262,9 @@ class JobEntriesPageContents extends ConsumerWidget {
                 ),
                 child: IconButton(
                   icon: const Icon(Icons.receipt_long, color: Colors.white),
-                  tooltip: 'Generate Invoice',
+                  tooltip: job.pricingType == JobPricingType.unpaid 
+                      ? 'Generate Time Document'
+                      : 'Generate Invoice',
                   onPressed: () => _generateInvoice(context, ref),
                 ),
               ),
