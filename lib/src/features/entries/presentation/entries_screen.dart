@@ -412,10 +412,11 @@ class ModernEntriesListTile extends StatelessWidget {
       );
     }
 
-    // Individual entry card - UPDATED to show payment type
-    // Determine the payment type indicator
-    final isUnpaid = model.middleText == 'Unpaid';
-    final isFixed = model.middleText?.contains('Fixed') ?? false;
+    // Individual entry card - FIXED to properly handle payment types
+    // The middleText comes from JobDetails.getPaymentDisplay()
+    final paymentText = model.middleText ?? '';
+    final isUnpaid = paymentText == 'Unpaid';
+    final isFixed = paymentText.startsWith('Fixed:');
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -472,9 +473,8 @@ class ModernEntriesListTile extends StatelessWidget {
                     color: Colors.black87,
                   ),
                 ),
-                if (isUnpaid)
+                if (isUnpaid) ...[
                   const SizedBox(height: 2),
-                if (isUnpaid)
                   Text(
                     'Unpaid / Portfolio Work',
                     style: TextStyle(
@@ -483,10 +483,22 @@ class ModernEntriesListTile extends StatelessWidget {
                       fontStyle: FontStyle.italic,
                     ),
                   ),
+                ],
+                if (isFixed) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Fixed price project',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          if (model.middleText != null && model.middleText!.isNotEmpty)
+          if (paymentText.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -522,7 +534,7 @@ class ModernEntriesListTile extends StatelessWidget {
                     ),
                   if (isUnpaid) const SizedBox(width: 4),
                   Text(
-                    model.middleText!,
+                    paymentText,
                     style: TextStyle(
                       color: isUnpaid
                           ? Colors.grey[700]

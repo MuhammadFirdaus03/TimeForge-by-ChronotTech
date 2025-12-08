@@ -231,7 +231,8 @@ class EntriesService {
         for (JobDetails jobDuration in dailyJobsDetails.jobsDetails)
           EntriesListTileModel(
             leadingText: jobDuration.name,
-            middleText: Format.currency(jobDuration.pay),
+            // CRITICAL FIX: Use getPaymentDisplay() instead of Format.currency(pay)
+            middleText: jobDuration.getPaymentDisplay(),
             trailingText: Format.hours(jobDuration.durationInHours),
           ),
       ]
