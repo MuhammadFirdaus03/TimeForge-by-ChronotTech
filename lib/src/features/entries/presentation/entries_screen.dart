@@ -487,7 +487,7 @@ class ModernEntriesListTile extends StatelessWidget {
                 if (isFixed) ...[
                   const SizedBox(height: 2),
                   Text(
-                    'Fixed price project',
+                    'Fixed',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey[600],
