@@ -1,4 +1,5 @@
 import 'package:starter_architecture_flutter_firebase/src/features/entries/domain/entry_job.dart';
+import 'package:starter_architecture_flutter_firebase/src/features/jobs/domain/job.dart';
 
 /// Temporary model class to store the time tracked and pay for a job
 class JobDetails {
@@ -6,21 +7,39 @@ class JobDetails {
     required this.name,
     required this.durationInHours,
     required this.pay,
+    this.pricingType,
+    this.fixedPrice,
   });
   final String name;
   double durationInHours;
   double pay;
+  final JobPricingType? pricingType;
+  final double? fixedPrice;
+  
+  // Helper to get display string for payment
+  String getPaymentDisplay() {
+    if (pricingType == JobPricingType.unpaid) {
+      return 'Unpaid';
+    } else if (pricingType == JobPricingType.fixedPrice && fixedPrice != null) {
+      return 'Fixed: \$${fixedPrice!.toStringAsFixed(0)}';
+    } else {
+      // Hourly - show actual earnings
+      return pay > 0 ? '\$${pay.toStringAsFixed(2)}' : '\$0.00';
+    }
+  }
 }
 
 /// Groups together all jobs/entries on a given day
 class DailyJobsDetails {
   DailyJobsDetails({required this.date, required this.jobsDetails});
   final DateTime date;
-  final List<JobDetails> jobsDetails; 
+  final List<JobDetails> jobsDetails;
 
+  // Only sum hourly jobs for pay
   double get pay => jobsDetails
+      .where((job) => job.pricingType == JobPricingType.hourly)
       .map((jobDuration) => jobDuration.pay)
-      .reduce((value, element) => value + element);
+      .fold(0.0, (sum, pay) => sum + pay);
 
   double get duration => jobsDetails
       .map((jobDuration) => jobDuration.durationInHours)
@@ -52,7 +71,7 @@ class DailyJobsDetails {
       list.add(DailyJobsDetails(date: date, jobsDetails: byJob));
     }
     
-    // ADDED: Sort by date, newest first (descending)
+    // Sort by date, newest first (descending)
     list.sort((a, b) => b.date.compareTo(a.date));
     
     return list;
@@ -63,18 +82,21 @@ class DailyJobsDetails {
     final Map<String, JobDetails> jobDuration = {};
     for (final entryJob in entries) {
       final entry = entryJob.entry;
+      final job = entryJob.job;
       
-      // FIXED: Use job helper for safe calculation
-      final pay = entryJob.job.calculateEarnings(entry.durationInHours);
+      // Calculate pay (0.0 for fixed/unpaid)
+      final pay = job.calculateEarnings(entry.durationInHours);
       
       if (jobDuration[entry.jobId] == null) {
         jobDuration[entry.jobId] = JobDetails(
-          name: entryJob.job.name,
+          name: job.name,
           durationInHours: entry.durationInHours,
           pay: pay,
+          pricingType: job.pricingType,
+          fixedPrice: job.fixedPrice, // MAKE SURE THIS IS SET
         );
       } else {
-        // Since pay for fixed/unpaid is 0.0, this safely accumulates ONLY hourly earnings
+        // Accumulate hours and pay (pay is 0.0 for fixed/unpaid)
         jobDuration[entry.jobId]!.pay += pay;
         jobDuration[entry.jobId]!.durationInHours += entry.durationInHours;
       }

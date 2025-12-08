@@ -261,101 +261,72 @@ class ModernEntriesListTile extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
+        child: Row(
           children: [
-            Row(
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.summarize,
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Total Hourly Earnings',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    model.middleText ?? '\$0',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Fixed & unpaid tracked separately',
+                    style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.summarize,
+                const Icon(Icons.access_time, color: Colors.white70, size: 16),
+                const SizedBox(height: 4),
+                Text(
+                  model.trailingText,
+                  style: const TextStyle(
                     color: Colors.white,
-                    size: 32,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Total Summary',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          // UPDATED: Show earnings if available, otherwise show time only
-                          if (model.middleText != null && model.middleText!.isNotEmpty) ...[
-                            Text(
-                              model.middleText!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'from hourly',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ] else ...[
-                            const Text(
-                              'No earnings',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
+                const Text(
+                  'All jobs',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Icon(Icons.access_time, color: Colors.white70, size: 16),
-                    const SizedBox(height: 4),
-                    Text(
-                      model.trailingText,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'total time',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -411,8 +382,7 @@ class ModernEntriesListTile extends StatelessWidget {
                 ),
               ),
             ),
-            // UPDATED: Show earnings only if present
-            if (model.middleText != null && model.middleText!.isNotEmpty) ...[
+            if (model.middleText != null && model.middleText!.isNotEmpty)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -428,8 +398,7 @@ class ModernEntriesListTile extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-            ],
+            const SizedBox(width: 8),
             Text(
               model.trailingText,
               style: const TextStyle(
@@ -443,7 +412,11 @@ class ModernEntriesListTile extends StatelessWidget {
       );
     }
 
-    // Individual entry card
+    // Individual entry card - UPDATED to show payment type
+    // Determine the payment type indicator
+    final isUnpaid = model.middleText == 'Unpaid';
+    final isFixed = model.middleText?.contains('Fixed') ?? false;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       padding: const EdgeInsets.all(16),
@@ -466,45 +439,101 @@ class ModernEntriesListTile extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.blue[400]!, Colors.blue[600]!],
+                colors: isUnpaid 
+                    ? [Colors.grey[400]!, Colors.grey[600]!]
+                    : isFixed
+                        ? [Colors.purple[400]!, Colors.purple[600]!]
+                        : [Colors.green[400]!, Colors.green[600]!],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
-              Icons.work_outline,
+            child: Icon(
+              isUnpaid 
+                  ? Icons.volunteer_activism
+                  : isFixed
+                      ? Icons.check_circle
+                      : Icons.attach_money,
               color: Colors.white,
               size: 20,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              model.leadingText,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  model.leadingText,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                if (isUnpaid)
+                  const SizedBox(height: 2),
+                if (isUnpaid)
+                  Text(
+                    'Unpaid / Portfolio Work',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
             ),
           ),
-          // UPDATED: Show earnings only for hourly jobs
           if (model.middleText != null && model.middleText!.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.green[50],
+                color: isUnpaid 
+                    ? Colors.grey[100]
+                    : isFixed 
+                        ? Colors.purple[50] 
+                        : Colors.green[50],
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Text(
-                model.middleText!,
-                style: TextStyle(
-                  color: Colors.green[800],
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                border: Border.all(
+                  color: isUnpaid
+                      ? Colors.grey[300]!
+                      : isFixed 
+                          ? Colors.purple[200]! 
+                          : Colors.green[200]!,
                 ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isFixed)
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 14,
+                      color: Colors.purple[700],
+                    ),
+                  if (isFixed) const SizedBox(width: 4),
+                  if (isUnpaid)
+                    Icon(
+                      Icons.favorite_border,
+                      size: 14,
+                      color: Colors.grey[600],
+                    ),
+                  if (isUnpaid) const SizedBox(width: 4),
+                  Text(
+                    model.middleText!,
+                    style: TextStyle(
+                      color: isUnpaid
+                          ? Colors.grey[700]
+                          : isFixed 
+                              ? Colors.purple[800] 
+                              : Colors.green[800],
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
           const SizedBox(width: 12),
