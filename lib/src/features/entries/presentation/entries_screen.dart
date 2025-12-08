@@ -5,6 +5,7 @@ import 'package:starter_architecture_flutter_firebase/src/constants/strings.dart
 import 'package:starter_architecture_flutter_firebase/src/features/entries/domain/entries_list_tile_model.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/entries/application/entries_service.dart';
 import 'package:starter_architecture_flutter_firebase/src/common_widgets/list_items_builder.dart';
+import 'package:starter_architecture_flutter_firebase/src/utils/format.dart';
 
 class EntriesScreen extends ConsumerWidget {
   const EntriesScreen({super.key});
@@ -239,7 +240,9 @@ class ModernEntriesListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (model.leadingText == 'All Entries') {
-      // Summary card at the top
+      // UPDATED: Enhanced summary card showing all payment types
+      final summary = model.paymentSummary;
+      
       return Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(20),
@@ -261,75 +264,121 @@ class ModernEntriesListTile extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.summarize,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Total Hourly Earnings',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    model.middleText ?? '\$0',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Fixed & unpaid tracked separately',
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            // Main total value
+            Row(
               children: [
-                const Icon(Icons.access_time, color: Colors.white70, size: 16),
-                const SizedBox(height: 4),
-                Text(
-                  model.trailingText,
-                  style: const TextStyle(
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet,
                     color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    size: 28,
                   ),
                 ),
-                const Text(
-                  'All jobs',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Total Value',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        model.middleText ?? '\$0',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                // Total hours on the right
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Icon(Icons.access_time, color: Colors.white70, size: 18),
+                    const SizedBox(height: 4),
+                    Text(
+                      model.trailingText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'All jobs',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+            
+            // Breakdown section (if summary exists)
+            if (summary != null) ...[
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    // Hourly earnings row
+                    if (summary.hourlyEarnings > 0) ...[
+                      _buildBreakdownRow(
+                        icon: Icons.schedule,
+                        label: 'Hourly',
+                        value: Format.currency(summary.hourlyEarnings),
+                        color: Colors.green[300]!,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    
+                    // Fixed price row
+                    if (summary.fixedPriceTotal > 0) ...[
+                      _buildBreakdownRow(
+                        icon: Icons.check_circle,
+                        label: 'Fixed Price',
+                        value: Format.currency(summary.fixedPriceTotal),
+                        color: Colors.purple[300]!,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    
+                    // Unpaid row
+                    if (summary.unpaidHours > 0) ...[
+                      _buildBreakdownRow(
+                        icon: Icons.volunteer_activism,
+                        label: 'Unpaid',
+                        value: '${summary.unpaidHours.toStringAsFixed(1)}h tracked',
+                        color: Colors.orange[300]!,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -412,8 +461,7 @@ class ModernEntriesListTile extends StatelessWidget {
       );
     }
 
-    // Individual entry card - FIXED to properly handle payment types
-    // The middleText comes from JobDetails.getPaymentDisplay()
+    // Individual entry card
     final paymentText = model.middleText ?? '';
     final isUnpaid = paymentText == 'Unpaid';
     final isFixed = paymentText.startsWith('Fixed:');
@@ -573,6 +621,46 @@ class ModernEntriesListTile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // Helper widget for breakdown rows
+  Widget _buildBreakdownRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(icon, color: color, size: 16),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }
