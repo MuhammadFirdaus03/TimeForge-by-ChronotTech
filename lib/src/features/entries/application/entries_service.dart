@@ -56,6 +56,33 @@ class EntriesFilter extends _$EntriesFilter {
 }
 
 // ==========================================
+// NEW: Payment Summary Model
+// ==========================================
+
+class PaymentSummary {
+  final double hourlyEarnings;
+  final double fixedPriceTotal;
+  final double unpaidHours;
+  final double totalHours;
+  
+  PaymentSummary({
+    required this.hourlyEarnings,
+    required this.fixedPriceTotal,
+    required this.unpaidHours,
+    required this.totalHours,
+  });
+  
+  // Total billable value (hourly + fixed)
+  double get totalValue => hourlyEarnings + fixedPriceTotal;
+  
+  // Has any billable work?
+  bool get hasBillableWork => totalValue > 0;
+  
+  // Has any unpaid work?
+  bool get hasUnpaidWork => unpaidHours > 0;
+}
+
+// ==========================================
 // 2. SERVICE CLASS
 // ==========================================
 
@@ -85,7 +112,51 @@ class EntriesService {
     }).whereType<EntryJob>().toList();
   }
 
-  /// Exports the entry data to a comma-separated-values (CSV) string - FIXED
+  /// NEW: Calculate payment summary for all job types
+  static PaymentSummary calculatePaymentSummary(List<EntryJob> entries) {
+    double hourlyEarnings = 0.0;
+    double fixedPriceTotal = 0.0;
+    double unpaidHours = 0.0;
+    double totalHours = 0.0;
+    
+    // Track which fixed price jobs we've already counted
+    final Set<String> countedFixedJobs = {};
+    
+    for (final entryJob in entries) {
+      final job = entryJob.job;
+      final entry = entryJob.entry;
+      final hours = entry.durationInHours;
+      
+      totalHours += hours;
+      
+      switch (job.pricingType) {
+        case JobPricingType.hourly:
+          hourlyEarnings += job.calculateEarnings(hours);
+          break;
+          
+        case JobPricingType.fixedPrice:
+          // Only count each fixed price job ONCE
+          if (!countedFixedJobs.contains(job.id)) {
+            fixedPriceTotal += job.fixedPrice ?? 0.0;
+            countedFixedJobs.add(job.id);
+          }
+          break;
+          
+        case JobPricingType.unpaid:
+          unpaidHours += hours;
+          break;
+      }
+    }
+    
+    return PaymentSummary(
+      hourlyEarnings: hourlyEarnings,
+      fixedPriceTotal: fixedPriceTotal,
+      unpaidHours: unpaidHours,
+      totalHours: totalHours,
+    );
+  }
+
+  /// Exports the entry data to a comma-separated-values (CSV) string
   Future<String> exportEntriesToCsv(UserID uid, EntriesFilterState filterState) async {
     final allEntries = await _allEntriesStream(uid).first;
     final now = DateTime.now();
@@ -115,15 +186,12 @@ class EntriesService {
 
     final filteredEntries = allEntries.where((entryJob) {
         final entryDate = entryJob.entry.start;
-        // Filter out archived jobs
         if (entryJob.job.status == JobStatus.archived) return false;
-        // Apply date filters
         if (startFilter != null && entryDate.isBefore(startFilter)) return false;
         if (endFilter != null && entryDate.isAfter(endFilter)) return false;
         return true;
     }).toList();
 
-    // FIXED: Changed column name to be more generic for rate/price
     final List<List<String>> rawRows = [];
     rawRows.add(['Date', 'Job Name', 'Start Time', 'End Time', 'Duration (Hours)', 'Rate/Price', 'Earnings (\$)']);
 
@@ -137,10 +205,8 @@ class EntriesService {
         final duration = entry.end.difference(entry.start);
         final durationInHours = duration.inMinutes / 60;
         
-        // FIXED: Use job helper for safe calculation (returns 0.0 for non-hourly per-entry)
         final pay = job.calculateEarnings(durationInHours);
 
-        // FIXED: Determine what to display in the 'Rate/Price' column
         String rateOrPrice;
         switch (job.pricingType) {
           case JobPricingType.hourly:
@@ -160,8 +226,8 @@ class EntriesService {
             timeFormatter.format(entry.start), 
             timeFormatter.format(entry.end),   
             durationInHours.toStringAsFixed(2),
-            rateOrPrice, // FIXED
-            pay.toStringAsFixed(2), // FIXED
+            rateOrPrice,
+            pay.toStringAsFixed(2),
         ]);
     }
     
@@ -199,11 +265,9 @@ class EntriesService {
       return [];
     }
     
-    // CHANGED: Create mutable list and sort properly
     final allDailyJobsDetails = List<DailyJobsDetails>.from(
       DailyJobsDetails.all(allEntries)
     )..sort((a, b) {
-      // Sort by date descending (newest first)
       return b.date.compareTo(a.date);
     });
 
@@ -211,15 +275,17 @@ class EntriesService {
         .map((dateJobsDuration) => dateJobsDuration.duration)
         .reduce((value, element) => value + element);
 
-    final totalPay = allDailyJobsDetails
-        .map((dateJobsDuration) => dateJobsDuration.pay)
-        .reduce((value, element) => value + element);
+    // CHANGED: Calculate complete payment summary instead of just hourly
+    final paymentSummary = calculatePaymentSummary(allEntries);
 
     return <EntriesListTileModel>[
+      // CHANGED: Pass payment summary data to the first tile
       EntriesListTileModel(
         leadingText: 'All Entries',
-        middleText: Format.currency(totalPay),
+        middleText: Format.currency(paymentSummary.totalValue), // Total billable (hourly + fixed)
         trailingText: Format.hours(totalDuration),
+        // NEW: Store summary data for the UI to use
+        paymentSummary: paymentSummary,
       ),
       for (DailyJobsDetails dailyJobsDetails in allDailyJobsDetails) ...[
         EntriesListTileModel(
@@ -231,7 +297,6 @@ class EntriesService {
         for (JobDetails jobDuration in dailyJobsDetails.jobsDetails)
           EntriesListTileModel(
             leadingText: jobDuration.name,
-            // CRITICAL FIX: Use getPaymentDisplay() instead of Format.currency(pay)
             middleText: jobDuration.getPaymentDisplay(),
             trailingText: Format.hours(jobDuration.durationInHours),
           ),
