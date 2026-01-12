@@ -35,7 +35,6 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // IMPROVED: Gradient background
       backgroundColor: Colors.grey[50],
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
@@ -134,7 +133,7 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
                 showArchived: true,
                 activeJobId: timerState.activeJob?.id,
               ),
-            ], //extracomments
+            ],
           );
         },
       ),
@@ -152,13 +151,42 @@ class JobsListView extends ConsumerWidget {
   final bool showArchived;
   final String? activeJobId;
 
+  // Dialog to ask for the task name before starting the timer
+  Future<String?> _showTaskNameDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('New Entry'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'What are you working on?',
+            hintText: 'e.g., Backend, UI Design, Research',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final jobsQuery = ref.watch(jobsQueryProvider);
     
     return FirestoreListView<Job>(
       query: jobsQuery,
-      // IMPROVED: Better empty state
       emptyBuilder: (context) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -206,7 +234,6 @@ class JobsListView extends ConsumerWidget {
       loadingBuilder: (context) => const Center(
         child: CircularProgressIndicator(),
       ),
-      // IMPROVED: Padding around items
       padding: const EdgeInsets.all(12),
       itemBuilder: (context, doc) {
         final job = doc.data();
@@ -239,12 +266,19 @@ class JobsListView extends ConsumerWidget {
               AppRoute.job.name,
               pathParameters: {'id': job.id},
             ),
-            onStartTimer: () {
-              // Ensure we only start a timer if the job is paid (or you decide otherwise)
+            onStartTimer: () async {
+              // Ensure we only start a timer if the job is paid
               if (job.pricingType != JobPricingType.unpaid || job.pricingType == JobPricingType.hourly) {
-                 ref.read(timerControllerProvider.notifier).startTimer(job);
+                  // Wait for the user to provide a name for the entry
+                  final name = await _showTaskNameDialog(context);
+                  
+                  if (name != null && name.isNotEmpty) {
+                    ref.read(timerControllerProvider.notifier).startTimer(job, name);
+                  }
               } else {
-                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot track time for unpaid jobs')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Cannot track time for unpaid jobs'))
+                  );
               }
             },
           ),
@@ -271,12 +305,12 @@ class JobCard extends StatelessWidget {
   List<Color> _getGradient() {
     final hash = job.name.hashCode;
     final gradients = [
-      [const Color(0xFF667eea), const Color(0xFF764ba2)], // Purple
-      [const Color(0xFFf093fb), const Color(0xFFf5576c)], // Pink
-      [const Color(0xFF4facfe), const Color(0xFF00f2fe)], // Blue
-      [const Color(0xFF43e97b), const Color(0xFF38f9d7)], // Green
-      [const Color(0xFFfa709a), const Color(0xFFfee140)], // Orange
-      [const Color(0xFF30cfd0), const Color(0xFF330867)], // Teal
+      [const Color(0xFF667eea), const Color(0xFF764ba2)], 
+      [const Color(0xFFf093fb), const Color(0xFFf5576c)], 
+      [const Color(0xFF4facfe), const Color(0xFF00f2fe)], 
+      [const Color(0xFF43e97b), const Color(0xFF38f9d7)], 
+      [const Color(0xFFfa709a), const Color(0xFFfee140)], 
+      [const Color(0xFF30cfd0), const Color(0xFF330867)], 
     ];
     return gradients[hash.abs() % gradients.length];
   }
@@ -330,7 +364,6 @@ class JobCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Icon circle
                 Container(
                   width: 56,
                   height: 56,
@@ -345,7 +378,6 @@ class JobCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                // Job details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,7 +391,6 @@ class JobCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      // NEW: Show client company (or name as fallback)
                       if (job.clientCompany?.isNotEmpty == true || job.clientName.isNotEmpty) ...[
                         Row(
                           children: [
@@ -394,7 +425,6 @@ class JobCard extends StatelessWidget {
                             size: 16,
                           ),
                           Text(
-                            // FIXED: Use helper to show correct price/rate/status
                             job.getDisplayPrice(),
                             style: const TextStyle(
                               color: Colors.white70,
@@ -428,7 +458,6 @@ class JobCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Action buttons
                 if (!isArchived && !isTracking)
                   Container(
                     decoration: BoxDecoration(

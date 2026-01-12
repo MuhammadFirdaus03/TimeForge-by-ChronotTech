@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:starter_architecture_flutter_firebase/src/constants/app_sizes.dart';
@@ -19,7 +20,6 @@ class _TimerStickyBarState extends ConsumerState<TimerStickyBar> {
   @override
   void initState() {
     super.initState();
-    // Create a ticker that updates the UI every second
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       final startTime = ref.read(timerControllerProvider).startTime;
       if (startTime != null) {
@@ -40,34 +40,35 @@ class _TimerStickyBarState extends ConsumerState<TimerStickyBar> {
   Widget build(BuildContext context) {
     final timerState = ref.watch(timerControllerProvider);
     final job = timerState.activeJob;
+    final taskName = timerState.taskName; // Access the task name from state
 
-    // If no job is running, hide this bar completely
     if (job == null) {
       return const SizedBox.shrink();
     }
 
     return Container(
-      color: Theme.of(context).primaryColor, // Uses your app's blue color
+      color: Theme.of(context).primaryColor,
       padding: const EdgeInsets.symmetric(horizontal: Sizes.p16, vertical: Sizes.p8),
       child: SafeArea(
         top: false,
         child: Row(
           children: [
-            // Left: Blinking Recording Icon
             const Icon(Icons.circle, color: Colors.redAccent, size: 12),
             gapW12,
-            
-            // Middle: Job Name & Time
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // SHOW TASK NAME INSTEAD OF GENERIC MESSAGE
                   Text(
-                    'Working on ${job.name}',
+                    taskName != null && taskName.isNotEmpty 
+                        ? taskName 
+                        : 'Working on ${job.name}',
                     style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -75,21 +76,16 @@ class _TimerStickyBarState extends ConsumerState<TimerStickyBar> {
                   Text(
                     Format.hours(_elapsed.inHours + (_elapsed.inMinutes / 60)), 
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      fontFeatures: [FontFeature.tabularFigures()], // Prevents jitter
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),
                 ],
               ),
             ),
-
-            // Right: STOP Button
             IconButton(
-              onPressed: () {
-                ref.read(timerControllerProvider.notifier).stopTimer();
-              },
+              onPressed: () => ref.read(timerControllerProvider.notifier).stopTimer(),
               icon: const Icon(Icons.stop_circle_outlined, size: 32),
               color: Colors.white,
               tooltip: 'Stop Timer',

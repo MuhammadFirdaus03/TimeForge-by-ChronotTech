@@ -93,13 +93,12 @@ class JobEntriesPageContents extends ConsumerWidget {
       // Generate invoice number
       final invoiceNumber = 'INV-${DateTime.now().millisecondsSinceEpoch}';
 
-      // FIXED: Implement logic to create line items based on JobPricingType
+      // Implement logic to create line items based on JobPricingType
       final List<InvoiceLineItem> lineItems = [];
       
       if (job.pricingType == JobPricingType.hourly) {
           // For hourly, generate line item for each entry
           lineItems.addAll(entries.map((entry) {
-              // FIX: Safely convert ratePerHour from nullable int? to double, defaulting to 0.0
               final rate = (job.ratePerHour ?? 0).toDouble();
               return InvoiceLineItem(
                   date: entry.start,
@@ -114,16 +113,13 @@ class JobEntriesPageContents extends ConsumerWidget {
           final totalHours = hoursList.fold(0.0, (sum, h) => sum + h);
           
           lineItems.add(InvoiceLineItem(
-              date: DateTime.now(), // Use today's date for fixed item
+              date: DateTime.now(),
               description: 'Completed Project: ${job.name} (Time tracked: ${totalHours.toStringAsFixed(1)}h)',
-              hours: 1.0, // Quantity of 1 unit
-              ratePerHour: job.fixedPrice ?? 0.0, // Fixed price is the total amount (as the rate per unit 1)
+              hours: 1.0,
+              ratePerHour: job.fixedPrice ?? 0.0,
           ));
-      } else {
-        // Unpaid/Free work: No line items for billing
       }
       
-      // Prevent crash and confusion if an unpaid job is erroneously called
       if (lineItems.isEmpty && job.pricingType != JobPricingType.unpaid) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -133,7 +129,6 @@ class JobEntriesPageContents extends ConsumerWidget {
               duration: Duration(seconds: 3),
             ),
           );
-          Navigator.pop(context);
         }
         return;
       }
@@ -144,10 +139,10 @@ class JobEntriesPageContents extends ConsumerWidget {
         issueDate: DateTime.now(),
         dueDate: DateTime.now().add(const Duration(days: 14)),
         
-        // Your info (you can customize this or make it editable)
+        // Your info
         yourName: user.displayName ?? user.email?.split('@')[0] ?? 'Freelancer',
         yourEmail: user.email ?? '',
-        yourPhone: '+60 12-345-6789', // TODO: Make this configurable
+        yourPhone: '+60 12-345-6789', 
         
         // Client info from job
         clientName: job.clientName,
@@ -157,6 +152,7 @@ class JobEntriesPageContents extends ConsumerWidget {
         
         // Project details
         projectName: job.name,
+        pricingType: job.pricingType, // Added to fix the "Required named parameter" error
         lineItems: lineItems,
         
         // Payment terms
@@ -175,8 +171,7 @@ class JobEntriesPageContents extends ConsumerWidget {
         );
       }
     } catch (e) {
-      // Close loading dialog if still open
-      if (context.mounted) Navigator.pop(context);
+      if (context.mounted && Navigator.canPop(context)) Navigator.pop(context);
       
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -229,7 +224,6 @@ class JobEntriesPageContents extends ConsumerWidget {
               onPressed: () => context.pop(),
             ),
             actions: <Widget>[
-              // Generate Invoice button
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
@@ -242,7 +236,6 @@ class JobEntriesPageContents extends ConsumerWidget {
                   onPressed: () => _generateInvoice(context, ref),
                 ),
               ),
-              // Edit button
               Container(
                 margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
