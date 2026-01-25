@@ -14,6 +14,20 @@ class AuthRepository {
   Future<void> signInAnonymously() {
     return _auth.signInAnonymously();
   }
+
+  /// Permanently deletes the currently authenticated user from Firebase.
+  /// Note: This action is sensitive and may require recent authentication.
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await user.delete();
+    }
+  }
+
+  /// Signs out the currently authenticated user.
+  Future<void> signOut() {
+    return _auth.signOut();
+  }
 }
 
 @Riverpod(keepAlive: true)

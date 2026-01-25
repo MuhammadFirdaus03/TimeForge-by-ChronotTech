@@ -42,3 +42,101 @@ class JobEntriesList extends ConsumerWidget {
     );
   }
 }
+
+class DismissibleEntryListItem extends ConsumerWidget {
+  const DismissibleEntryListItem({
+    super.key,
+    required this.dismissibleKey,
+    required this.entry,
+    required this.job,
+    required this.onDismissed,
+    required this.onTap,
+  });
+
+  final Key dismissibleKey;
+  final Entry entry;
+  final Job job;
+  final VoidCallback onDismissed;
+  final VoidCallback onTap;
+
+  // --- Double-layer verification dialog for entries ---
+  Future<bool?> _showDeleteEntryDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    const confirmationWord = 'DELETE';
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Delete Time Entry?'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'This action is permanent and will remove this time log from your records.',
+                  style: TextStyle(color: Colors.red, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                const Text('Please type "DELETE" to confirm:'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: confirmationWord,
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: controller.text == confirmationWord
+                    ? () => Navigator.pop(context, true)
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete Permanently'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Dismissible(
+      key: dismissibleKey,
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16.0),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      direction: DismissDirection.endToStart,
+      // --- Integrated Verification ---
+      confirmDismiss: (direction) async {
+        return await _showDeleteEntryDialog(context);
+      },
+      onDismissed: (direction) => onDismissed(),
+      child: EntryListItem(
+        entry: entry,
+        job: job,
+        onTap: onTap,
+      ),
+    );
+  }
+}

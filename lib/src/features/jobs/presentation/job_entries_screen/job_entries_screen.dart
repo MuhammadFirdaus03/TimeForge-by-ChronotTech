@@ -152,7 +152,7 @@ class JobEntriesPageContents extends ConsumerWidget {
         
         // Project details
         projectName: job.name,
-        pricingType: job.pricingType, // Added to fix the "Required named parameter" error
+        pricingType: job.pricingType, 
         lineItems: lineItems,
         
         // Payment terms
@@ -255,7 +255,7 @@ class JobEntriesPageContents extends ConsumerWidget {
           ),
         ),
       ),
-      body: JobEntriesList(job: job),
+      body: JobEntriesList(job: job), // This widget handles individual swipe-to-delete items
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: () => context.goNamed(

@@ -1,4 +1,3 @@
-import 'dart:async';
 
 import 'package:starter_architecture_flutter_firebase/src/features/entries/domain/entry_job.dart';
 import 'package:starter_architecture_flutter_firebase/src/features/jobs/domain/job.dart';

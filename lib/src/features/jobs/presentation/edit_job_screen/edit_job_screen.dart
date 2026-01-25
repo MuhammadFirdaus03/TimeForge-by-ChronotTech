@@ -458,7 +458,7 @@ class _EditJobPageState extends ConsumerState<EditJobScreen> {
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       ),
-                      value: _selectedClientId,
+                      initialValue: _selectedClientId,
                       hint: const Text('Choose a client'),
                       isExpanded: true,
                       items: [

@@ -181,6 +181,60 @@ class JobsListView extends ConsumerWidget {
     );
   }
 
+  // --- NEW: Double-layer verification dialog for deletion ---
+  Future<bool?> _showDeleteConfirmationDialog(BuildContext context, Job job) async {
+    final controller = TextEditingController();
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Delete ${job.name}?'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'This action is permanent and cannot be undone. All entries for this job will be lost.',
+                  style: TextStyle(color: Colors.red),
+                ),
+                const SizedBox(height: 16),
+                Text('Please type "${job.name}" to confirm:'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: job.name,
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => setState(() {}), // Refresh to update button state
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: controller.text == job.name
+                    ? () => Navigator.pop(context, true)
+                    : null, // Disabled until names match
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete Permanently'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final jobsQuery = ref.watch(jobsQueryProvider);
@@ -256,6 +310,10 @@ class JobsListView extends ConsumerWidget {
             child: const Icon(Icons.delete, color: Colors.white, size: 32),
           ),
           direction: DismissDirection.endToStart,
+          // --- UPDATED: Use confirmDismiss for double-layer verification ---
+          confirmDismiss: (direction) async {
+            return await _showDeleteConfirmationDialog(context, job);
+          },
           onDismissed: (direction) => ref
               .read(jobsScreenControllerProvider.notifier)
               .deleteJob(job),

@@ -196,6 +196,57 @@ class CustomProfileScreen extends ConsumerWidget {
                     subtitle: 'Theme and display settings',
                     onTap: () {},
                   ),
+
+                  // Delete Account Option
+                  _SettingsCard(
+                    icon: Icons.delete_forever_outlined,
+                    title: 'Delete Account',
+                    subtitle: 'Permanently remove your data',
+                    onTap: () async {
+                      final shouldDelete = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete Account?'),
+                          content: const Text(
+                            'This action is permanent. All your projects, clients, and time tracking data will be deleted forever.',
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.red,
+                              ),
+                              child: const Text('Delete Permanently'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (shouldDelete == true && context.mounted) {
+                        try {
+                          await ref.read(authRepositoryProvider).deleteAccount();
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'For security, please sign out and sign in again before deleting your account.',
+                                ),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    },
+                  ),
                   
                   _SettingsCard(
                     icon: Icons.help_outline,
